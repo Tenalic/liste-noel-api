@@ -1,6 +1,7 @@
 package sc.liste.noel.liste_noel.back.ressource;
 
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -8,21 +9,28 @@ import jakarta.validation.constraints.Size;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.liste_noel.back.dto.CompteResponse;
+import sc.liste.noel.liste_noel.back.dto.ConnexionRequest;
+import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
+import sc.liste.noel.liste_noel.back.service.JwtService;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
+import sc.liste.noel.liste_noel.common.dto.CompteDto;
 import sc.liste.noel.liste_noel.common.service.MessageService;
 import sc.liste.noel.liste_noel.front.constante.Constantes;
 
+import java.time.Duration;
 import java.util.Locale;
 
 import static sc.liste.noel.liste_noel.front.constante.Constantes.*;
 
 @RestController
-@RequestMapping("/compte")
+@RequestMapping("/api/compte")
 public class CompteRessource {
 
     private static final Logger LOGGER = LogManager.getLogger(CompteRessource.class);
@@ -33,6 +41,8 @@ public class CompteRessource {
     private SecretServiceInterface secretService;
     @Autowired
     private MessageService messageService;
+    @Autowired
+    private JwtService jwtService;
 
     /**
      * API permettant de créer un nouveau compte.
@@ -53,7 +63,6 @@ public class CompteRessource {
             @RequestParam(value = "pseudo") String pseudo,
             @RequestParam(value = "cguAccepted") @AssertTrue(message = CGU_NON_ACCEPTE_KEY) boolean cguAccepted,
             @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
-
         try {
             // Vérification du secret
             if (!secretService.verifierSecret(secret)) {
@@ -77,6 +86,43 @@ public class CompteRessource {
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la création du compte pour l'email : " + email, e);
             return ResponseEntity.internalServerError().body(new CompteResponse(email, messageService.getMessage(COMPTE_ERROR_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
+    @PostMapping("/connexion")
+    public ResponseEntity<CompteResponse> connexion(@RequestBody @Valid ConnexionRequest connexionRequest,
+                                                    @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+        String email = connexionRequest.getEmail();
+
+        LOGGER.info("Entrée service connexion : " + email);
+
+        try {
+            CompteDto compte = compteService.connexion(email, connexionRequest.getPassword());
+
+            String token = jwtService.genererToken(compte.getEmail());
+
+            // Cookie HTTP-only : JavaScript ne peut PAS le lire → sécurisé contre XSS
+            ResponseCookie cookie = ResponseCookie.from("auth-token", token)
+                    .httpOnly(true)                     // inaccessible depuis JS
+                    .secure(true)                       // HTTPS uniquement (false en dev local)
+                    .path("/")                          // valable sur toutes les routes
+                    .maxAge(Duration.ofSeconds(86400))  // 24h, comme jwt.expiration
+                    .sameSite("Strict")                 // protection CSRF
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(new CompteResponse(compte.getEmail(), "Connexion réussie", RETOUR_API_OK));
+
+        } catch (CompteNotFoundException exception) {
+            return ResponseEntity.ok()
+                    .body(new CompteResponse(email, messageService.getMessage(CONNEXION_FAIL_KEY, locale)
+                            , RETOUR_API_KO));
+
+        } catch (Exception e) {
+            LOGGER.error("Erreur lors de la connexion : " + email, e);
+            return ResponseEntity.internalServerError()
+                    .body(new CompteResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constantes.RETOUR_API_KO));
         }
     }
 

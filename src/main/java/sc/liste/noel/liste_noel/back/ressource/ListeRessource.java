@@ -7,18 +7,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.liste_noel.back.dto.GeneriqueResponse;
+import sc.liste.noel.liste_noel.back.dto.MesListesResponse;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
+import sc.liste.noel.liste_noel.common.dto.ListeDto;
 import sc.liste.noel.liste_noel.common.service.MessageService;
 import sc.liste.noel.liste_noel.front.constante.Constantes;
 
+import java.security.Principal;
+import java.util.List;
 import java.util.Locale;
 
 import static sc.liste.noel.liste_noel.front.constante.Constantes.API_LISTE_ERREUR_KEY;
 import static sc.liste.noel.liste_noel.front.constante.Constantes.API_SECRET_INVALID_KEY;
 
 @RestController
-@RequestMapping("/liste")
+@RequestMapping("/api/liste")
 public class ListeRessource {
 
     private static final Logger LOGGER = LogManager.getLogger(ListeRessource.class);
@@ -33,6 +37,19 @@ public class ListeRessource {
         this.listeServiceInterface = listeServiceInterface;
         this.secretService = secretService;
         this.messageService = messageService;
+    }
+
+    @GetMapping("/mes-listes")
+    public ResponseEntity<MesListesResponse> getMesListes(Principal principal) {
+        String email = principal.getName();
+        try {
+            List<ListeDto> listes = listeServiceInterface.getListesOfEmail(email);
+            List<ListeDto> favoris = listeServiceInterface.getListeFavorisOfEmail(email);
+            return ResponseEntity.ok(new MesListesResponse(listes, favoris));
+        } catch (Exception e) {
+            LOGGER.error("Erreur lors de la récupération des listes pour " + email, e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @DeleteMapping("supprimer-liste")

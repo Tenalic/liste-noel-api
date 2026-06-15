@@ -49,8 +49,8 @@ public class ListeController {
         this.listeService = listeService;
     }
 
-    @GetMapping("/liste")
-    public String listeGet(Model model, HttpSession session) {
+    @GetMapping("/mes-listes")
+    public String meListes(Model model, HttpSession session) {
         String email = (String) session.getAttribute(ConstantesSession.EMAIL);
 
         List<ListeDto> listDeListeDto = listeServiceInterface.getListesOfEmail(email);

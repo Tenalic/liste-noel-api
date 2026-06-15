@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.service.impl.MailService;
 import sc.liste.noel.liste_noel.common.dto.CompteDto;
@@ -92,6 +93,8 @@ public class ConnexionController {
             } else {
                 redirectAttributes.addFlashAttribute(ERREUR, messageService.getMessage(CONNEXION_FAIL_KEY, locale));
             }
+        } catch (CompteNotFoundException exception) {
+            redirectAttributes.addFlashAttribute(ERREUR, messageService.getMessage(CONNEXION_FAIL_KEY, locale));
         } catch (Exception e) {
             LOGGER.log(Level.ERROR, e);
             redirectAttributes.addFlashAttribute(ERREUR, messageService.getMessage(ERREUR_GENERIQUE_KEY, locale) + " : " + e.getMessage());

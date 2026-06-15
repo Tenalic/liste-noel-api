@@ -18,6 +18,7 @@ public class Constantes {
     public static final String API_COMPTE_EMAIL_OBLIGATOIRE_KEY = "api.compte.cossy.obligatoire";
     public static final String API_COMPTE_OLD_PASSWORD_OBLIGATOIRE_KEY = "api.compte.oldPassword.obligatoire";
     public static final String API_COMPTE_NEW_PASSWORD_TROP_COURT_KEY = "api.compte.newPassword.trop_court";
+    public static final String API_COMPTE_PASSWORD_OBLIGATOIRE = "api.compte.password.obligatoire";
 
     // Messages d'erreur (technique)
     public static final String API_LISTE_ERREUR_KEY = "api.liste.erreur";

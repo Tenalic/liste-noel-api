@@ -32,7 +32,7 @@ public interface CompteServiceInterface {
      * @return true si un compte correspond à la combinaison email et mot de passe,
      * false sinon
      */
-    CompteDto connexion(String email, String password);
+    CompteDto connexion(String email, String password) throws CompteNotFoundException;
 
     /**
      * Sauvegarde un nouveau compte avec le email et password donné en base de
@@ -70,22 +70,6 @@ public interface CompteServiceInterface {
      * @return true si cela c'est bien passé, false sinon
      */
     boolean deconexion(String email);
-
-    /**
-     * Recupère le token d'un joueur
-     *
-     * @param email : email dont on souhaite récupérer le token
-     * @return TokenDto
-     */
-    TokenDto getTokenDtoByEmail(String email);
-
-    /**
-     * Recupère le email a partir d'un token
-     *
-     * @param token : token
-     * @return email
-     */
-    TokenDto getTokenDtoByToken(String token) throws CompteNotFoundException, TokenExpiredException;
 
     void genererMotDePasseEtEnvoyer(String email);
 

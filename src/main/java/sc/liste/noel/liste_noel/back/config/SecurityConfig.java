@@ -1,0 +1,84 @@
+package sc.liste.noel.liste_noel.back.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import sc.liste.noel.liste_noel.back.service.JwtAuthFilter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                // Désactive CSRF : on est protégé par le cookie SameSite=Strict + JWT
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // Pas de session côté serveur : le JWT suffit
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                ).exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Si c'est un appel API → renvoie 401 en JSON
+                            if (request.getRequestURI().startsWith("/api/compte/")) {
+                                response.setStatus(401);
+                                response.setContentType("application/json");
+                                response.getWriter().write("{\"messageRetour\":\"Non autorisé\",\"codeRetour\":1}");
+                            } else {
+                                // Si c'est une page → redirige vers connexion
+                                response.sendRedirect("/connexion");
+                            }
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            if (request.getRequestURI().startsWith("/api/compte/")) {
+                                response.setStatus(403);
+                                response.setContentType("application/json");
+                                response.getWriter().write("{\"messageRetour\":\"Accès refusé\",\"codeRetour\":1}");
+                            } else {
+                                response.sendRedirect("/connexion");
+                            }
+                        })
+                )
+                // Définition des routes publiques et protégées
+                .authorizeHttpRequests(auth -> auth
+                        // Routes publiques (pas besoin d'être connecté)
+                        .requestMatchers(
+                                "/api/compte/**",   // ← remplace toutes tes routes /api/compte/ en une seule ligne
+                                "/error",           // ← ajoute ça
+                                "/connexion",
+
+                                // Tes anciennes routes Thymeleaf (à supprimer au fur et à mesure)
+                                "/welcome",
+                                "/liste",
+                                "/connexion",
+                                "/inscription",
+                                "/",
+                                // ... toutes tes autres routes Thymeleaf
+
+                                // Ressources statiques (CSS, JS, images)
+                                "/css/**",
+                                "/js/**",
+                                "/images/**"
+                        ).permitAll()
+                        // Toutes les autres routes nécessitent d'être connecté
+                        .anyRequest().authenticated()
+                )
+
+                // On branche notre filtre JWT avant le filtre d'authentification de Spring
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+}

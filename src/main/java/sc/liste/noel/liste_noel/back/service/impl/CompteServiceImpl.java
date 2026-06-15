@@ -6,20 +6,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import sc.liste.noel.liste_noel.back.db.entity.CompteEntity;
 import sc.liste.noel.liste_noel.back.db.repo.CompteRepo;
+import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
-import sc.liste.noel.liste_noel.back.service.JwtTokenInterface;
 import sc.liste.noel.liste_noel.back.utils.PasswordUtils;
 import sc.liste.noel.liste_noel.common.utils.Utils;
 import sc.liste.noel.liste_noel.back.CompteMapper;
 import sc.liste.noel.liste_noel.common.dto.CompteDto;
 import sc.liste.noel.liste_noel.common.dto.TokenDto;
-import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
-import sc.liste.noel.liste_noel.back.exception.TokenExpiredException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import static sc.liste.noel.liste_noel.front.constante.Constantes.CONNEXION_FAIL_KEY;
+import static sc.liste.noel.liste_noel.front.constante.ConstantesSession.ERREUR;
 
 @Service
 public class CompteServiceImpl implements CompteServiceInterface {
@@ -31,9 +32,6 @@ public class CompteServiceImpl implements CompteServiceInterface {
 
     @Autowired
     private CompteRepo compteRepo;
-
-    @Autowired
-    private JwtTokenInterface jwtToken;
 
     @Value("${salt}")
     private String salt;
@@ -54,7 +52,7 @@ public class CompteServiceImpl implements CompteServiceInterface {
     }
 
     @Override
-    public CompteDto connexion(String email, String password) {
+    public CompteDto connexion(String email, String password) throws CompteNotFoundException {
         CompteEntity compte = compteRepo.findByEmailAndPassword(email, PasswordUtils.generateSecurePassword(password, salt));
         if (compte != null) {
             compte.setNbConnexion(compte.getNbConnexion() + 1);
@@ -62,7 +60,7 @@ public class CompteServiceImpl implements CompteServiceInterface {
             compteRepo.save(compte);
             return CompteMapper.EntityToDto(compte);
         } else {
-            return null;
+            throw new CompteNotFoundException("Compte non trouvé");
         }
     }
 
@@ -137,41 +135,6 @@ public class CompteServiceImpl implements CompteServiceInterface {
             return true;
         }
         return false;
-    }
-
-    @Override
-    public TokenDto getTokenDtoByEmail(String cossy) {
-
-        TokenDto tokenDto = tokenValideMap.get(cossy);
-
-        if (tokenDto != null && jwtToken.validateToken(tokenDto.getToken())) {
-            return tokenDto;
-        } else {
-            String newToken = jwtToken.generateToken(cossy);
-            tokenDto = new TokenDto();
-            tokenDto.setCossy(cossy);
-            tokenDto.setTokenExpireDate(LocalDateTime.now().plusHours(DURABILITE_TOKEN));
-            tokenDto.setToken(newToken);
-            tokenValideMap.put(cossy, tokenDto);
-            return tokenDto;
-        }
-    }
-
-    @Override
-    public TokenDto getTokenDtoByToken(String token) throws CompteNotFoundException, TokenExpiredException {
-
-        String cossy = jwtToken.getUsernameFromToken(token);
-
-        TokenDto tokenDto = tokenValideMap.get(cossy);
-
-        if (tokenDto != null && jwtToken.validateToken(tokenDto.getToken())) {
-            return tokenDto;
-        } else {
-            if (tokenDto == null) {
-                throw new CompteNotFoundException("Aucun compte ne correspond a ce token");
-            }
-            throw new TokenExpiredException("Le token n'est plus valide");
-        }
     }
 
     @Override
