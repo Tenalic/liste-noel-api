@@ -236,6 +236,22 @@ public class ListeServiceImpl implements ListeServiceInterface {
         }
     }
 
+    @Transactional
+    @Override
+    public String supprimerListe(Long idListe) {
+        ListeEntity listeEntity = listeRepo.findByIdListe(idListe);
+        if (listeEntity != null) {
+            List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
+            for (FavorisEntity favorisEntity : favorisEntityList) {
+                favorisRepo.delete(favorisEntity);
+            }
+            listeRepo.delete(listeEntity);
+            return "La liste " + listeEntity.getNomListe() + " à bien été supprimé";
+        } else {
+            return "La liste " + idListe + " est introuvable, elle ne peux pas être supprimée";
+        }
+    }
+
     @Override
     public ListeContexteDto getListeAvecContexte(Long id, String email) {
         ListeDto liste = this.getListeById(id);

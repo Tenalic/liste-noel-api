@@ -64,7 +64,7 @@ public class CompteRessource {
             @RequestHeader(value = "secret") String secret,
             @RequestParam(value = "pseudo") String pseudo,
             @RequestParam(value = "cguAccepted") @AssertTrue(message = CGU_NON_ACCEPTE_KEY) boolean cguAccepted,
-            @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+            Locale locale) {
         try {
             // Vérification du secret
             if (!secretService.verifierSecret(secret)) {
@@ -140,7 +140,7 @@ public class CompteRessource {
 
     @PostMapping("/connexion")
     public ResponseEntity<CompteResponse> connexion(@RequestBody @Valid ConnexionRequest connexionRequest,
-                                                    @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+                                                    Locale locale) {
         String email = connexionRequest.getEmail();
 
         LOGGER.info("Entrée service connexion : " + email);
@@ -206,7 +206,7 @@ public class CompteRessource {
             @RequestParam @NotBlank(message = API_COMPTE_OLD_PASSWORD_OBLIGATOIRE_KEY) String oldPassword,
             @RequestParam @Size(message = API_COMPTE_NEW_PASSWORD_TROP_COURT_KEY) String newPassword,
             @RequestHeader(value = "secret") String secret,
-            @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+            Locale locale) {
 
         try {
             if (!secretService.verifierSecret(secret)) {
@@ -240,7 +240,7 @@ public class CompteRessource {
     public ResponseEntity<CompteResponse> supprimerCompte(
             @RequestParam @NotBlank String email,
             @RequestHeader(value = "secret") String secret,
-            @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+            Locale locale) {
 
         try {
             if (!secretService.verifierSecret(secret)) {
@@ -266,7 +266,7 @@ public class CompteRessource {
     public ResponseEntity<String> activateAccount(
             @RequestParam @NotBlank String email,
             @RequestParam @NotBlank String key,
-            @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+            Locale locale) {
 
         boolean activated = compteService.activateUser(email, key);
         if (activated) {

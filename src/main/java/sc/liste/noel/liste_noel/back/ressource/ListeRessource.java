@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import sc.liste.noel.liste_noel.back.dto.CreationListeRequest;
 import sc.liste.noel.liste_noel.back.dto.GeneriqueResponse;
 import sc.liste.noel.liste_noel.back.dto.ListeReponse;
 import sc.liste.noel.liste_noel.back.dto.MesListesResponse;
@@ -66,12 +67,32 @@ public class ListeRessource {
         }
     }
 
-    @DeleteMapping("supprimer-liste")
+    @PostMapping("/creer")
+    public ResponseEntity<GeneriqueResponse> creerUneListe(Principal principal, @RequestBody CreationListeRequest listeRequest) {
+        String email = principal.getName();
+        listeServiceInterface.creerListe(email, listeRequest.getNomListe());
+        return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
+    }
+
+    @DeleteMapping("/{idListe}")
+    public ResponseEntity<GeneriqueResponse> supprimerUneListe(
+            Locale locale, @PathVariable String idListe, Principal principal) {
+        String email = principal.getName();
+        try {
+            String response = listeServiceInterface.supprimerListe(Long.valueOf(idListe));
+            return ResponseEntity.ok(new GeneriqueResponse(response, Constantes.RETOUR_API_OK));
+        } catch (Exception e) {
+            LOGGER.error("Erreur lors de la suppression de la liste " + idListe + " pour l'email " + email, e);
+            return ResponseEntity.internalServerError().body(new GeneriqueResponse(messageService.getMessage(API_LISTE_ERREUR_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
+    @DeleteMapping("/supprimer-liste")
     public ResponseEntity<GeneriqueResponse> supprimerListe(
             @RequestParam @NotBlank String email,
             @RequestParam @NotBlank String nomListe,
             @RequestHeader(value = "secret") String secret,
-            @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+            Locale locale) {
         try {
             if (!secretService.verifierSecret(secret)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

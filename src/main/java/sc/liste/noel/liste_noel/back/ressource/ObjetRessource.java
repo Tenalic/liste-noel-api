@@ -36,7 +36,7 @@ public class ObjetRessource {
 
     @PutMapping("/{idObjet}")
     public ResponseEntity<GeneriqueResponse> modifierObjet(Principal principal, @RequestBody ObjetDto objet, @PathVariable String idObjet,
-                                                           @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
+                                                           Locale locale) {
         String email = principal.getName();
         LOGGER.info("Modification de l'objet {} par l'utilisateur {}", idObjet, email);
         try {

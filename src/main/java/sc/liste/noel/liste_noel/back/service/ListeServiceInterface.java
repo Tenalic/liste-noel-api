@@ -30,6 +30,7 @@ public interface ListeServiceInterface {
     void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate, String email) throws ModificationInterditeException;
 
     String supprimerListe(String nomListe, String emailListe);
+    String supprimerListe(Long idListe);
 
     ListeContexteDto getListeAvecContexte(Long id, String email);
 
