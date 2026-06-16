@@ -1,5 +1,6 @@
 package sc.liste.noel.liste_noel.back.service;
 
+import sc.liste.noel.liste_noel.back.exception.ModificationInterditeException;
 import sc.liste.noel.liste_noel.common.dto.ListeDto;
 import sc.liste.noel.liste_noel.common.dto.ListeContexteDto;
 
@@ -26,7 +27,7 @@ public interface ListeServiceInterface {
     void supprimerFavori(Long idListe, String email);
 
     void supprimerObjet(Long idObjet, String email);
-    void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate);
+    void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate, String email) throws ModificationInterditeException;
 
     String supprimerListe(String nomListe, String emailListe);
 

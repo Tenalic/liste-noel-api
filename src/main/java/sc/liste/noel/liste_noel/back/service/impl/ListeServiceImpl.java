@@ -13,6 +13,7 @@ import sc.liste.noel.liste_noel.back.db.repo.CompteRepo;
 import sc.liste.noel.liste_noel.back.db.repo.FavorisRepo;
 import sc.liste.noel.liste_noel.back.db.repo.ListeRepo;
 import sc.liste.noel.liste_noel.back.db.repo.ObjetRepo;
+import sc.liste.noel.liste_noel.back.exception.ModificationInterditeException;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
 import sc.liste.noel.liste_noel.common.dto.ListeContexteDto;
 import sc.liste.noel.liste_noel.common.dto.ListeDto;
@@ -134,6 +135,11 @@ public class ListeServiceImpl implements ListeServiceInterface {
         return list;
     }
 
+    private ListeDto transcoEmailToPPseudo(ListeDto list) {
+        list.setProprietaire(compteRepo.findByEmail(list.getProprietaire()).getPseudo());
+        return list;
+    }
+
     @Transactional
     @Override
     public void ajouterFavori(Long idListe, String email) {
@@ -183,13 +189,17 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
     @Transactional
     @Override
-    public void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate) {
+    public void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate, String email) throws ModificationInterditeException {
 
         ObjetEntity objetEntity = objetRepo.findByIdObjet(idObjet);
 
         if (objetEntity != null) {
 
             ListeEntity listeEntity = listeRepo.findByIdListe(objetEntity.getIdListe());
+
+            if(!listeEntity.getProprietaire().equals(email)) {
+                throw new ModificationInterditeException("Vous ne pouvez pas modifier un objet qui n'appartient pas à l'une de vos liste");
+            }
 
             String bodyEmail = "L'objet " + objetEntity.getTitre() + " : " + objetEntity.getDescription() + " - " + objetEntity.getUrl()
                     + " a été modifié dans la liste " + listeEntity.getNomListe()
@@ -229,6 +239,7 @@ public class ListeServiceImpl implements ListeServiceInterface {
     @Override
     public ListeContexteDto getListeAvecContexte(Long id, String email) {
         ListeDto liste = this.getListeById(id);
+        this.transcoEmailToPPseudo(liste);
 
         ListeContexteDto listeContexte = new ListeContexteDto(liste);
 

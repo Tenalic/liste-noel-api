@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.liste_noel.back.dto.CompteResponse;
 import sc.liste.noel.liste_noel.back.dto.ConnexionRequest;
+import sc.liste.noel.liste_noel.back.dto.InscriptionRequest;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.service.JwtService;
@@ -24,6 +25,7 @@ import sc.liste.noel.liste_noel.common.dto.CompteDto;
 import sc.liste.noel.liste_noel.common.service.MessageService;
 import sc.liste.noel.liste_noel.front.constante.Constantes;
 
+import java.security.Principal;
 import java.time.Duration;
 import java.util.Locale;
 
@@ -89,6 +91,53 @@ public class CompteRessource {
         }
     }
 
+    /**
+     * API permettant de créer un nouveau compte.
+     *
+     * @param locale Locale pour la langue des messages (optionnel, défaut = fr).
+     * @return ResponseEntity<CompteResponse> avec le code retour (0 si OK) et un message.
+     */
+    @PostMapping("/inscription")
+    public ResponseEntity<CompteResponse> inscription(
+            @RequestBody InscriptionRequest inscriptionRequest,
+            @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr")
+            Locale locale) {
+        try {
+            // Vérification de l'existence du compte
+            if (compteService.compteExiste(inscriptionRequest.getEmail())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(COMPTE_EXISTE_KEY, locale), Constantes.RETOUR_API_KO));
+            }
+
+            // Vérification de l'existence du pseudo
+            if (compteService.pseudoExiste(inscriptionRequest.getPseudo())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(PSEUDO_EXISTE_KEY, locale), Constantes.RETOUR_API_KO));
+            }
+
+            // Création du compte
+            String email = compteService.creationCompte(inscriptionRequest.getEmail(), inscriptionRequest.getPassword(), inscriptionRequest.getAcceptCGU(), inscriptionRequest.getPseudo());
+
+            String token = jwtService.genererToken(email);
+
+            // Cookie HTTP-only : JavaScript ne peut PAS le lire → sécurisé contre XSS
+            ResponseCookie cookie = ResponseCookie.from("auth-token", token)
+                    .httpOnly(true)                     // inaccessible depuis JS
+                    .secure(true)                       // HTTPS uniquement (false en dev local)
+                    .path("/")                          // valable sur toutes les routes
+                    .maxAge(Duration.ofSeconds(86400))  // 24h, comme jwt.expiration
+                    .sameSite("Strict")                 // protection CSRF
+                    .build();
+
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(Constantes.API_COMPTE_CREATION_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
+
+        } catch (Exception e) {
+            LOGGER.error("Erreur lors de la création du compte pour l'email : " + inscriptionRequest.getEmail(), e);
+            return ResponseEntity.internalServerError().body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(COMPTE_ERROR_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
     @PostMapping("/connexion")
     public ResponseEntity<CompteResponse> connexion(@RequestBody @Valid ConnexionRequest connexionRequest,
                                                     @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr") Locale locale) {
@@ -126,6 +175,21 @@ public class CompteRessource {
         }
     }
 
+    @PostMapping("/deconnexion")
+    public ResponseEntity<Void> deconnexion() {
+        // On écrase le cookie avec maxAge=0 → le navigateur le supprime immédiatement
+        ResponseCookie cookie = ResponseCookie.from("auth-token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)          // ← c'est ça qui supprime le cookie
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
+    }
 
     /**
      * Mettre a jour le mot de passe d'un compte

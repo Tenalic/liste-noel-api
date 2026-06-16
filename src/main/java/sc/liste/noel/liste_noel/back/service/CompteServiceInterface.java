@@ -42,7 +42,7 @@ public interface CompteServiceInterface {
      * @param password : mot de passe joueur
      * @return true si tout s'est bien passé
      */
-    boolean creationCompte(String email, String password, boolean cguAccepted, String pseudo);
+    String creationCompte(String email, String password, boolean cguAccepted, String pseudo);
 
     /**
      * Supprime en base de données le compte avec le email donné

@@ -78,7 +78,7 @@ public class CompteServiceImpl implements CompteServiceInterface {
     }
 
     @Override
-    public boolean creationCompte(String email, String password, boolean cguAccepted, String pseudo) {
+    public String creationCompte(String email, String password, boolean cguAccepted, String pseudo) {
         String activationkey = Generators.timeBasedEpochGenerator().generate().toString();
         compteRepo.save(new CompteEntity(email, PasswordUtils.generateSecurePassword(password, salt), cguAccepted, pseudo, activationkey));
         String url = baseUrl + "/compte/activate?userId=" + email + "&key=" + activationkey;
@@ -98,7 +98,7 @@ public class CompteServiceImpl implements CompteServiceInterface {
                 "\n" +
                 "Cordialement,";
         mailService.sendEmail(email, "Confirmation de création de compte", body);
-        return true;
+        return email;
     }
 
     @Override
