@@ -14,10 +14,12 @@ import sc.liste.noel.liste_noel.back.db.repo.FavorisRepo;
 import sc.liste.noel.liste_noel.back.db.repo.ListeRepo;
 import sc.liste.noel.liste_noel.back.db.repo.ObjetRepo;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
+import sc.liste.noel.liste_noel.common.dto.ListeContexteDto;
 import sc.liste.noel.liste_noel.common.dto.ListeDto;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -58,7 +60,7 @@ public class ListeServiceImpl implements ListeServiceInterface {
     @Override
     public List<ListeDto> getListesOfEmail(String email) {
         List<ListeEntity> listeEntityList = listeRepo.findByProprietaire(email);
-        return ListeMapper.entitiesToDtos(listeEntityList);
+        return ListeMapper.entitiesToDtosSansListeObjet(listeEntityList);
     }
 
     @Override
@@ -117,7 +119,7 @@ public class ListeServiceImpl implements ListeServiceInterface {
             }
         }
 
-        return transcoEmailToPPseudo(ListeMapper.entitiesToDtos(list));
+        return transcoEmailToPPseudo(ListeMapper.entitiesToDtosSansListeObjet(list));
     }
 
     public boolean checkifListeInFavoris(Long idListe, String email) {
@@ -166,7 +168,8 @@ public class ListeServiceImpl implements ListeServiceInterface {
             String bodyEmail = "L'objet " + objetEntity.getTitre() + " : " + objetEntity.getDescription() + " " + objetEntity.getUrl()
                     + " a été supprimé de la liste " + listeEntity.getNomListe()
                     + " qui fait partie de vos favoris" + " consulter la liste : \n\n"
-                    + ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe());;
+                    + ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe());
+            ;
             String sujetEmail = "Objet supprimé de la liste : " + listeEntity.getNomListe();
 
             List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
@@ -223,6 +226,25 @@ public class ListeServiceImpl implements ListeServiceInterface {
         }
     }
 
+    @Override
+    public ListeContexteDto getListeAvecContexte(Long id, String email) {
+        ListeDto liste = this.getListeById(id);
+
+        ListeContexteDto listeContexte = new ListeContexteDto(liste);
+
+        listeContexte.setEstProprietaire(liste.getProprietaire().equals(email));
+
+        if (!listeContexte.isEstProprietaire()) {
+            listeContexte.setEstFavoris(
+                    this.getListeFavorisOfEmail(email)
+                            .stream()
+                            .anyMatch(f -> Objects.equals(f.getIdListe(), id))
+            );
+        }
+
+        return listeContexte;
+    }
+
     private List<String> getListeOfEmailFromListeFavorisDao(List<FavorisEntity> favorisEntityList) {
         return Optional.ofNullable(favorisEntityList)
                 .orElse(new ArrayList<>())
@@ -231,8 +253,8 @@ public class ListeServiceImpl implements ListeServiceInterface {
                 .toList();
     }
 
-    private void envoyerEmailToListe(List<String> listOfEmail,String body, String subject) {
-        for(String email : listOfEmail) {
+    private void envoyerEmailToListe(List<String> listOfEmail, String body, String subject) {
+        for (String email : listOfEmail) {
             mailService.sendEmail(email, subject, body);
         }
     }

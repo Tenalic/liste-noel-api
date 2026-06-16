@@ -1,6 +1,7 @@
 package sc.liste.noel.liste_noel.back.service;
 
 import sc.liste.noel.liste_noel.common.dto.ListeDto;
+import sc.liste.noel.liste_noel.common.dto.ListeContexteDto;
 
 import java.util.List;
 
@@ -28,5 +29,7 @@ public interface ListeServiceInterface {
     void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate);
 
     String supprimerListe(String nomListe, String emailListe);
+
+    ListeContexteDto getListeAvecContexte(Long id, String email);
 
 }

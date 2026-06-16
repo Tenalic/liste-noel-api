@@ -8,7 +8,7 @@ import java.util.List;
 
 public class ListeMapper {
 
-    public static List<ListeDto> entitiesToDtos(List<ListeEntity> listeEntityList) {
+    public static List<ListeDto> entitiesToDtosSansListeObjet(List<ListeEntity> listeEntityList) {
         if(listeEntityList == null) {
             return null;
         }
@@ -18,7 +18,6 @@ public class ListeMapper {
             listeDto.setNomListe(listeEntity.getNomListe());
             listeDto.setProprietaire(listeEntity.getProprietaire());
             listeDto.setIdListe(listeEntity.getIdListe());
-            listeDto.setListeObjet(ObjetMapper.entitiesToDtos(listeEntity.getObjetDaoList()));
             list.add(listeDto);
         }
         return list;

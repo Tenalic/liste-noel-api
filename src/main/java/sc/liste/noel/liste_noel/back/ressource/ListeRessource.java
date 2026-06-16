@@ -7,10 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.liste_noel.back.dto.GeneriqueResponse;
+import sc.liste.noel.liste_noel.back.dto.ListeReponse;
 import sc.liste.noel.liste_noel.back.dto.MesListesResponse;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
 import sc.liste.noel.liste_noel.common.dto.ListeDto;
+import sc.liste.noel.liste_noel.common.dto.ListeContexteDto;
 import sc.liste.noel.liste_noel.common.service.MessageService;
 import sc.liste.noel.liste_noel.front.constante.Constantes;
 
@@ -48,6 +50,18 @@ public class ListeRessource {
             return ResponseEntity.ok(new MesListesResponse(listes, favoris));
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la récupération des listes pour " + email, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{idListe}")
+    public ResponseEntity<ListeReponse> getUneListe(Principal principal, @PathVariable String idListe) {
+        String email = principal.getName();
+        try {
+            ListeContexteDto liste = listeServiceInterface.getListeAvecContexte(Long.valueOf(idListe), email);
+            return ResponseEntity.ok(new ListeReponse("Succes", Constantes.RETOUR_API_OK, liste, liste.isEstProprietaire(), liste.isEstFavoris()));
+        } catch (Exception e) {
+            LOGGER.error("Erreur lors de la récupération de la listes " + idListe, e);
             return ResponseEntity.internalServerError().build();
         }
     }

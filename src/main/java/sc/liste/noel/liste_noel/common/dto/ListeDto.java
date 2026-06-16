@@ -15,6 +15,8 @@ public class ListeDto implements Serializable {
 
     private String proprietaire;
 
+    private String pseudoProprietaire;
+
 
     public List<ObjetDto> getListeObjet() {
         return listeObjet;
@@ -55,5 +57,13 @@ public class ListeDto implements Serializable {
 
     public void setUrlPartage(String urlPartage) {
         this.urlPartage = urlPartage;
+    }
+
+    public String getPseudoProprietaire() {
+        return pseudoProprietaire;
+    }
+
+    public void setPseudoProprietaire(String pseudoProprietaire) {
+        this.pseudoProprietaire = pseudoProprietaire;
     }
 }
