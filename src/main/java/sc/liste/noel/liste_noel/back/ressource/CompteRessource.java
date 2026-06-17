@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.liste_noel.back.dto.*;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 import sc.liste.noel.liste_noel.back.exception.MailServiceDesactivedException;
+import sc.liste.noel.liste_noel.back.exception.MotDePasseException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.service.JwtService;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
@@ -195,7 +196,7 @@ public class CompteRessource {
         try {
             compteService.genererMotDePasseEtEnvoyer(motDePasseOublieRequest.getEmail());
             return ResponseEntity.ok().body(new GeneriqueResponse(messageService.getMessage(MOT_DE_PASSE_OUBLIE_P1_KEY, locale) + motDePasseOublieRequest.getEmail()
-                    + " " + messageService.getMessage(MOT_DE_PASSE_OUBLIE_P2_KEY, locale), Constantes.RETOUR_API_OK ));
+                    + " " + messageService.getMessage(MOT_DE_PASSE_OUBLIE_P2_KEY, locale), Constantes.RETOUR_API_OK));
         } catch (MailServiceDesactivedException e) {
             LOGGER.warn("L'envois d'email est désactivé, le mot de passe pour le compte {} n\'a pas été généré", motDePasseOublieRequest.getEmail());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GeneriqueResponse(messageService.getMessage(EMAIL_DESACTIVETED, locale), Constantes.RETOUR_API_KO));
@@ -215,7 +216,7 @@ public class CompteRessource {
      * @return ResponseEntity<CompteResponse> contenant le email, le code retour (0
      * si ok) et le messegae retour
      */
-    @PostMapping("/update-password")
+    //@PostMapping("/update-password")
     public ResponseEntity<CompteResponse> updatePassword(
             @RequestParam @NotBlank(message = API_COMPTE_EMAIL_OBLIGATOIRE_KEY) String email,
             @RequestParam @NotBlank(message = API_COMPTE_OLD_PASSWORD_OBLIGATOIRE_KEY) String oldPassword,
@@ -238,6 +239,30 @@ public class CompteRessource {
             return ResponseEntity.ok(new CompteResponse(email, messageService.getMessage(API_COMPTE_PASSWORD_UPDATE_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la mise à jour du mot de passe pour le email : " + email, e);
+            return ResponseEntity.internalServerError()
+                    .body(new CompteResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
+    @PostMapping("/update-password")
+    public ResponseEntity<CompteResponse> updateAPassword(@RequestBody ModifierMotDePasseRequest modifierMotDePasseRequest,
+                                                          Principal principal,
+                                                          Locale locale) {
+        String email = principal.getName();
+
+        try {
+            compteService.updatePassword(email, modifierMotDePasseRequest.getAncienMotDePasse(), modifierMotDePasseRequest.getNouveauMotDePasse(), modifierMotDePasseRequest.getConfirmationMotDePasse());
+            return ResponseEntity.ok(new CompteResponse(email, messageService.getMessage(API_COMPTE_PASSWORD_UPDATE_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
+        } catch (CompteNotFoundException exception) {
+            LOGGER.warn("[update-password] Compte introuvable, le mot de passe ne doit pas être correcte pour l'email : {}", email);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new CompteResponse(email, messageService.getMessage(MDP_CHANGE_INTROUVABLE, locale), Constantes.RETOUR_API_KO));
+        } catch (MotDePasseException exception) {
+            LOGGER.warn("[update-password] Les mots de passe ne sont pas identique pour l'email {}", email);
+            return ResponseEntity.badRequest()
+                    .body(new CompteResponse(email, messageService.getMessage(MDP_CHANGE_INCORECTE, locale), Constantes.RETOUR_API_KO));
+        } catch (Exception e) {
+            LOGGER.error("[update-password] Erreur lors de la mise à jour du mot de passe pour le email : {}", email, e);
             return ResponseEntity.internalServerError()
                     .body(new CompteResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constantes.RETOUR_API_KO));
         }

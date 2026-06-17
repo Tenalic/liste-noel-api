@@ -8,6 +8,7 @@ import sc.liste.noel.liste_noel.back.db.entity.CompteEntity;
 import sc.liste.noel.liste_noel.back.db.repo.CompteRepo;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 import sc.liste.noel.liste_noel.back.exception.MailServiceDesactivedException;
+import sc.liste.noel.liste_noel.back.exception.MotDePasseException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.utils.PasswordUtils;
 import sc.liste.noel.liste_noel.common.utils.Utils;
@@ -89,7 +90,7 @@ public class CompteServiceImpl implements CompteServiceInterface {
                 "\n" +
                 "Voici les détails de votre compte :\n" +
                 "\n" +
-                "Nom de compte : " + email +"\n" +
+                "Nom de compte : " + email + "\n" +
                 "Pour activer votre compte, veuillez cliquer sur le lien ci-dessous :\n" +
                 url + "\n" +
                 "\n" +
@@ -126,6 +127,25 @@ public class CompteServiceImpl implements CompteServiceInterface {
         return false;
     }
 
+    @Override
+    public boolean updatePassword(String email, String oldPassword, String newPassword, String confirmationNewPassWord) throws CompteNotFoundException, MotDePasseException {
+        CompteEntity compteEntity = compteRepo.findByEmailAndPassword(email,
+                PasswordUtils.generateSecurePassword(oldPassword, salt));
+        if (compteEntity != null) {
+            if (newPassword.equals(confirmationNewPassWord)) {
+                compteEntity.setPassword(PasswordUtils.generateSecurePassword(newPassword, salt));
+                compteEntity.setNbModificationMdp(compteEntity.getNbModificationMdp() + 1);
+                compteEntity.setDateDerniereModificationMdp(LocalDateTime.now());
+                compteRepo.save(compteEntity);
+                return true;
+            } else {
+                throw new MotDePasseException("Les mots de passes ne sont pas identique");
+            }
+        } else {
+            throw new CompteNotFoundException("Compte introuvable ou le mot de passe n'est pas corecte");
+        }
+    }
+
     private boolean forceUpdatePassword(String email, String newPassword) {
         CompteEntity compteEntity = compteRepo.findByEmail(email);
         if (compteEntity != null) {
@@ -141,7 +161,7 @@ public class CompteServiceImpl implements CompteServiceInterface {
     @Override
     public void genererMotDePasseEtEnvoyer(String email) throws MailServiceDesactivedException {
 
-        if(mailServiceActived) {
+        if (mailServiceActived) {
             String newMdp = Utils.generatePassayPassword();
             boolean isUpdate = forceUpdatePassword(email, newMdp);
             if (isUpdate) {

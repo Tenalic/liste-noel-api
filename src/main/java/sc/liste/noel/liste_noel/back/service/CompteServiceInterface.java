@@ -1,6 +1,7 @@
 package sc.liste.noel.liste_noel.back.service;
 
 import sc.liste.noel.liste_noel.back.exception.MailServiceDesactivedException;
+import sc.liste.noel.liste_noel.back.exception.MotDePasseException;
 import sc.liste.noel.liste_noel.common.dto.CompteDto;
 import sc.liste.noel.liste_noel.common.dto.TokenDto;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
@@ -62,6 +63,16 @@ public interface CompteServiceInterface {
      * @return true si tout s'est bien passé
      */
     boolean updatePassword(String email, String oldPassword, String newPassword);
+
+    /**
+     * Met a jour le password du compte
+     *
+     * @param email       : email compte
+     * @param oldPassword : ancien mot de passe
+     * @param newPassword : nouveau mot de passe
+     * @return true si tout s'est bien passé
+     */
+    boolean updatePassword(String email, String oldPassword, String newPassword, String confirmationNewPassword) throws CompteNotFoundException, MotDePasseException;
 
 
     /**

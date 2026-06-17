@@ -55,8 +55,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Routes publiques (pas besoin d'être connecté)
                         .requestMatchers(
-                                "/api/compte/**",   // ← remplace toutes tes routes /api/compte/ en une seule ligne
-                                "/error",           // ← ajoute ça
+                                "/api/compte/**",
+                                "/error",
                                 "/connexion",
 
                                 // Tes anciennes routes Thymeleaf (à supprimer au fur et à mesure)

@@ -43,6 +43,8 @@ public class Constantes {
     public static final String ERREUR_GENERIQUE_KEY = "erreurGenerique";
     public static final String API_LISTE_SUCCES_KEY = "api.liste.succes";
     public static final String EMAIL_DESACTIVETED = "api.compte.mail.desactive";
+    public static final String MDP_CHANGE_INCORECTE = "api.compte.mdp.change.incorecte";
+    public static final String MDP_CHANGE_INTROUVABLE = "api.compte.mdp.change.introuvable";
 
 
 
