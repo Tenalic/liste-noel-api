@@ -1,5 +1,6 @@
 package sc.liste.noel.liste_noel.back.service;
 
+import sc.liste.noel.liste_noel.back.exception.MailServiceDesactivedException;
 import sc.liste.noel.liste_noel.common.dto.CompteDto;
 import sc.liste.noel.liste_noel.common.dto.TokenDto;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
@@ -71,7 +72,7 @@ public interface CompteServiceInterface {
      */
     boolean deconexion(String email);
 
-    void genererMotDePasseEtEnvoyer(String email);
+    void genererMotDePasseEtEnvoyer(String email) throws MailServiceDesactivedException;
 
     boolean activateUser(String email, String key);
 }

@@ -42,6 +42,7 @@ public class Constantes {
     public static final String CONNEXION_FAIL_KEY = "connexionFail";
     public static final String ERREUR_GENERIQUE_KEY = "erreurGenerique";
     public static final String API_LISTE_SUCCES_KEY = "api.liste.succes";
+    public static final String EMAIL_DESACTIVETED = "api.compte.mail.desactive";
 
 
 

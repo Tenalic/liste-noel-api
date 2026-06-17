@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import sc.liste.noel.liste_noel.back.db.entity.CompteEntity;
 import sc.liste.noel.liste_noel.back.db.repo.CompteRepo;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
+import sc.liste.noel.liste_noel.back.exception.MailServiceDesactivedException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.utils.PasswordUtils;
 import sc.liste.noel.liste_noel.common.utils.Utils;
@@ -18,9 +19,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import static sc.liste.noel.liste_noel.front.constante.Constantes.CONNEXION_FAIL_KEY;
-import static sc.liste.noel.liste_noel.front.constante.ConstantesSession.ERREUR;
 
 @Service
 public class CompteServiceImpl implements CompteServiceInterface {
@@ -38,6 +36,9 @@ public class CompteServiceImpl implements CompteServiceInterface {
 
     @Autowired
     private MailService mailService;
+
+    @Value("${send_email_active}")
+    private Boolean mailServiceActived;
 
     private final Map<String, TokenDto> tokenValideMap = new HashMap<>();
 
@@ -138,13 +139,19 @@ public class CompteServiceImpl implements CompteServiceInterface {
     }
 
     @Override
-    public void genererMotDePasseEtEnvoyer(String email) {
-        String newMdp = Utils.generatePassayPassword();
-        boolean isUpdate = forceUpdatePassword(email, newMdp);
-        if (isUpdate) {
-            String body = "Votre mot de passe a été réinitialisé, voici votre nouveau mot de passe, vous pourrez le modifier une fois connecté : " + newMdp;
-            mailService.sendEmail(email, "Mot de passe modifié", body);
+    public void genererMotDePasseEtEnvoyer(String email) throws MailServiceDesactivedException {
+
+        if(mailServiceActived) {
+            String newMdp = Utils.generatePassayPassword();
+            boolean isUpdate = forceUpdatePassword(email, newMdp);
+            if (isUpdate) {
+                String body = "Votre mot de passe a été réinitialisé, voici votre nouveau mot de passe, vous pourrez le modifier une fois connecté : " + newMdp;
+                mailService.sendEmail(email, "Mot de passe modifié", body);
+            }
+        } else {
+            throw new MailServiceDesactivedException("L'envois de mail est désactivé");
         }
+
     }
 
     @Override

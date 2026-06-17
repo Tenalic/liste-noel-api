@@ -14,10 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import sc.liste.noel.liste_noel.back.dto.CompteResponse;
-import sc.liste.noel.liste_noel.back.dto.ConnexionRequest;
-import sc.liste.noel.liste_noel.back.dto.InscriptionRequest;
+import sc.liste.noel.liste_noel.back.dto.*;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
+import sc.liste.noel.liste_noel.back.exception.MailServiceDesactivedException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.service.JwtService;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
@@ -189,6 +188,22 @@ public class CompteRessource {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .build();
+    }
+
+    @PostMapping("/mot-de-passe-oublie")
+    public ResponseEntity<GeneriqueResponse> motDePasseOublie(@RequestBody MotDePasseOublieRequest motDePasseOublieRequest, Locale locale) {
+        try {
+            compteService.genererMotDePasseEtEnvoyer(motDePasseOublieRequest.getEmail());
+            return ResponseEntity.ok().body(new GeneriqueResponse(messageService.getMessage(MOT_DE_PASSE_OUBLIE_P1_KEY, locale) + motDePasseOublieRequest.getEmail()
+                    + " " + messageService.getMessage(MOT_DE_PASSE_OUBLIE_P2_KEY, locale), Constantes.RETOUR_API_OK ));
+        } catch (MailServiceDesactivedException e) {
+            LOGGER.warn("L'envois d'email est désactivé, le mot de passe pour le compte {} n\'a pas été généré", motDePasseOublieRequest.getEmail());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GeneriqueResponse(messageService.getMessage(EMAIL_DESACTIVETED, locale), Constantes.RETOUR_API_KO));
+        } catch (Exception e) {
+            LOGGER.error("[mot-de-passe-oublie] Une erreur est survenu", e);
+            return ResponseEntity.internalServerError()
+                    .body(new GeneriqueResponse(messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constantes.RETOUR_API_KO));
+        }
     }
 
     /**
