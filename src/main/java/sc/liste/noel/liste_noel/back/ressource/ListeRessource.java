@@ -10,10 +10,12 @@ import sc.liste.noel.liste_noel.back.dto.CreationListeRequest;
 import sc.liste.noel.liste_noel.back.dto.GeneriqueResponse;
 import sc.liste.noel.liste_noel.back.dto.ListeReponse;
 import sc.liste.noel.liste_noel.back.dto.MesListesResponse;
+import sc.liste.noel.liste_noel.back.exception.ModificationInterditeException;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
 import sc.liste.noel.liste_noel.common.dto.ListeDto;
 import sc.liste.noel.liste_noel.common.dto.ListeContexteDto;
+import sc.liste.noel.liste_noel.common.dto.ObjetDto;
 import sc.liste.noel.liste_noel.common.service.MessageService;
 import sc.liste.noel.liste_noel.front.constante.Constantes;
 
@@ -21,6 +23,7 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Locale;
 
+import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static sc.liste.noel.liste_noel.front.constante.Constantes.API_LISTE_ERREUR_KEY;
 import static sc.liste.noel.liste_noel.front.constante.Constantes.API_SECRET_INVALID_KEY;
 
@@ -102,6 +105,20 @@ public class ListeRessource {
             return ResponseEntity.ok(new GeneriqueResponse(response, Constantes.RETOUR_API_OK));
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la suppression de la liste " + nomListe + " pour l'email " + email, e);
+            return ResponseEntity.internalServerError().body(new GeneriqueResponse(messageService.getMessage(API_LISTE_ERREUR_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
+    @PostMapping("/{idListe}/cadeau")
+    public ResponseEntity<GeneriqueResponse> ajouterObjet(Principal principal, @RequestBody ObjetDto objet, @PathVariable String idListe,
+                                                          Locale locale) {
+        String email = principal.getName();
+        LOGGER.info("Ajout de l'objet {} par l'utilisateur {}", objet.getTitre(), email);
+        try {
+            listeServiceInterface.ajouterObjetDansUneListe(objet.getTitre(), objet.getUrl(), objet.getDescription(), idListe, email, objet.getValuePriorite());
+            return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
+        }
+        catch (Exception e) {
             return ResponseEntity.internalServerError().body(new GeneriqueResponse(messageService.getMessage(API_LISTE_ERREUR_KEY, locale), Constantes.RETOUR_API_KO));
         }
     }

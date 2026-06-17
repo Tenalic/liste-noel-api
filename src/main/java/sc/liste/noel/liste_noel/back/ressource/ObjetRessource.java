@@ -35,20 +35,32 @@ public class ObjetRessource {
 
 
     @PutMapping("/{idObjet}")
-    public ResponseEntity<GeneriqueResponse> modifierObjet(Principal principal, @RequestBody ObjetDto objet, @PathVariable String idObjet,
-                                                           Locale locale) {
+    public ResponseEntity<GeneriqueResponse> modifierObjet(Principal principal, @RequestBody ObjetDto objet, @PathVariable String idObjet, Locale locale) {
         String email = principal.getName();
         LOGGER.info("Modification de l'objet {} par l'utilisateur {}", idObjet, email);
         try {
             listeServiceInterface.modifierObjet(Long.valueOf(idObjet), objet.getTitre(), objet.getDescription(), objet.getUrl(), objet.getValuePriorite(), email);
             return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
-        }
-        catch (ModificationInterditeException exception) {
+        } catch (ModificationInterditeException exception) {
             LOGGER.warn("Tentative de modificaiton interdite de l'objet {} par la personne {}", idObjet, email);
             return ResponseEntity.status(FORBIDDEN).body(new GeneriqueResponse(exception.getMessage(), Constantes.RETOUR_API_KO));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new GeneriqueResponse(messageService.getMessage(API_LISTE_ERREUR_KEY, locale), Constantes.RETOUR_API_KO));
         }
+    }
+
+    @DeleteMapping("/{idObjet}")
+    public ResponseEntity<GeneriqueResponse> supprimerCadeau(Principal principal, @PathVariable String idObjet, Locale locale) {
+        String email = principal.getName();
+        try {
+            listeServiceInterface.supprimerObjet(Long.valueOf(idObjet), email);
+            return ResponseEntity.ok().body(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
+        } catch (ModificationInterditeException e) {
+            LOGGER.warn("Tentative de suppression interdite de l'objet {} par la personne {}", idObjet, email);
+            return ResponseEntity.status(FORBIDDEN).body(new GeneriqueResponse(e.getMessage(), Constantes.RETOUR_API_KO));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new GeneriqueResponse(messageService.getMessage(API_LISTE_ERREUR_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+
     }
 }

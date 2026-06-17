@@ -43,6 +43,9 @@ public class ListeServiceImpl implements ListeServiceInterface {
     @Autowired
     private MailService mailService;
 
+    @Value("${send_email_active}")
+    private Boolean mailServiceActived;
+
     @Override
     public ListeDto creerListe(String proprietaire, String nomListe) {
 
@@ -163,7 +166,7 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
     @Transactional
     @Override
-    public void supprimerObjet(Long idObjet, String email) {
+    public void supprimerObjet(Long idObjet, String email) throws ModificationInterditeException {
 
         ObjetEntity objetEntity = objetRepo.findByIdObjet(idObjet);
 
@@ -171,16 +174,22 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
             ListeEntity listeEntity = listeRepo.findByIdListe(objetEntity.getIdListe());
 
-            String bodyEmail = "L'objet " + objetEntity.getTitre() + " : " + objetEntity.getDescription() + " " + objetEntity.getUrl()
-                    + " a été supprimé de la liste " + listeEntity.getNomListe()
-                    + " qui fait partie de vos favoris" + " consulter la liste : \n\n"
-                    + ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe());
-            ;
-            String sujetEmail = "Objet supprimé de la liste : " + listeEntity.getNomListe();
+            if (!listeEntity.getProprietaire().equals(email)) {
+                throw new ModificationInterditeException("Vous ne pouvez pas supprimer un objet qui n'appartient pas à l'une de vos liste");
+            }
 
-            List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
+            if (mailServiceActived) {
+                String bodyEmail = "L'objet " + objetEntity.getTitre() + " : " + objetEntity.getDescription() + " " + objetEntity.getUrl()
+                        + " a été supprimé de la liste " + listeEntity.getNomListe()
+                        + " qui fait partie de vos favoris" + " consulter la liste : \n\n"
+                        + ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe());
+                ;
+                String sujetEmail = "Objet supprimé de la liste : " + listeEntity.getNomListe();
 
-            envoyerEmailToListe(getListeOfEmailFromListeFavorisDao(favorisEntityList), bodyEmail, sujetEmail);
+                List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
+
+                envoyerEmailToListe(getListeOfEmailFromListeFavorisDao(favorisEntityList), bodyEmail, sujetEmail);
+            }
 
             objetRepo.delete(objetEntity);
         }
@@ -197,7 +206,7 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
             ListeEntity listeEntity = listeRepo.findByIdListe(objetEntity.getIdListe());
 
-            if(!listeEntity.getProprietaire().equals(email)) {
+            if (!listeEntity.getProprietaire().equals(email)) {
                 throw new ModificationInterditeException("Vous ne pouvez pas modifier un objet qui n'appartient pas à l'une de vos liste");
             }
 
@@ -255,11 +264,12 @@ public class ListeServiceImpl implements ListeServiceInterface {
     @Override
     public ListeContexteDto getListeAvecContexte(Long id, String email) {
         ListeDto liste = this.getListeById(id);
-        this.transcoEmailToPPseudo(liste);
 
         ListeContexteDto listeContexte = new ListeContexteDto(liste);
 
         listeContexte.setEstProprietaire(liste.getProprietaire().equals(email));
+
+        this.transcoEmailToPPseudo(listeContexte);
 
         if (!listeContexte.isEstProprietaire()) {
             listeContexte.setEstFavoris(
