@@ -11,7 +11,7 @@
     </parent>
 
     <groupId>sc.liste.noel</groupId>
-    <artifactId>liste-noel</artifactId>
+    <artifactId>liste-noel-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
