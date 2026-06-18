@@ -60,12 +60,24 @@ public class ListeRessource {
 
     @GetMapping("/{idListe}")
     public ResponseEntity<ListeReponse> getUneListe(Principal principal, @PathVariable String idListe) {
-        String email = principal.getName();
+        String email = principal != null ? principal.getName() : null;
         try {
             ListeContexteDto liste = listeServiceInterface.getListeAvecContexte(Long.valueOf(idListe), email);
             return ResponseEntity.ok(new ListeReponse("Succes", Constantes.RETOUR_API_OK, liste, liste.isEstProprietaire(), liste.isEstFavoris()));
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la récupération de la listes " + idListe, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{idListe}/favoris")
+    public ResponseEntity<GeneriqueResponse> addFavoris(Principal principal, @PathVariable String idListe) {
+        String email = principal.getName();
+        try {
+            listeServiceInterface.modifierFavori(Long.valueOf(idListe), email);
+            return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
+        } catch (Exception e) {
+            LOGGER.error("Erreur lors de la modification de favoris {} {}",idListe, email, e);
             return ResponseEntity.internalServerError().build();
         }
     }

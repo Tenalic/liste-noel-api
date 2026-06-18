@@ -37,7 +37,7 @@ public class ListeMapper {
     }
 
     public static String buildUrlPartage(String baseUrl, Long idListe) {
-        return baseUrl + "/partage?id=" + idListe;
+        return baseUrl + "/liste/" + idListe;
     }
 
 }

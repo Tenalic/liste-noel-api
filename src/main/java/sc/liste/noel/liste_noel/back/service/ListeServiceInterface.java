@@ -25,6 +25,7 @@ public interface ListeServiceInterface {
 
     void ajouterFavori(Long idListe, String email);
     void supprimerFavori(Long idListe, String email);
+    void modifierFavori(Long idListe, String email);
 
     void supprimerObjet(Long idObjet, String email) throws ModificationInterditeException;
     void modifierObjet(Long idObjet, String titreUpdate, String descriptionUpdate, String urlUpdate, int prioriteUpdate, String email) throws ModificationInterditeException;

@@ -166,6 +166,17 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
     @Transactional
     @Override
+    public void modifierFavori(Long idListe, String email) {
+        FavorisEntity favorisEntityList = favorisRepo.findByEmailAndIdListe(email, idListe);
+        if (favorisEntityList != null) {
+            favorisRepo.delete(favorisEntityList);
+        } else {
+            this.ajouterFavori(idListe, email);
+        }
+    }
+
+    @Transactional
+    @Override
     public void supprimerObjet(Long idObjet, String email) throws ModificationInterditeException {
 
         ObjetEntity objetEntity = objetRepo.findByIdObjet(idObjet);
@@ -269,14 +280,24 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
         listeContexte.setEstProprietaire(liste.getProprietaire().equals(email));
 
-        this.transcoEmailToPPseudo(listeContexte);
-
-        if (!listeContexte.isEstProprietaire()) {
-            listeContexte.setEstFavoris(
-                    this.getListeFavorisOfEmail(email)
-                            .stream()
-                            .anyMatch(f -> Objects.equals(f.getIdListe(), id))
-            );
+        if (email != null) {
+            this.transcoEmailToPPseudo(listeContexte);
+            if (!listeContexte.isEstProprietaire()) {
+                listeContexte.setEstFavoris(
+                        this.getListeFavorisOfEmail(email)
+                                .stream()
+                                .anyMatch(f -> Objects.equals(f.getIdListe(), id))
+                );
+            }
+        } else {
+            // Si non connecté, on anonymise les infos
+            listeContexte.setEstFavoris(false);
+            listeContexte.getListeObjet()
+                    .forEach(objetDto -> {
+                        objetDto.setDetenteur(null);
+                        objetDto.setEstPrit(null);
+                        objetDto.setPseudoDetenteur(null);
+                    });
         }
 
         return listeContexte;

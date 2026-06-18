@@ -12,7 +12,7 @@ public class ObjetDto implements Serializable {
 
     private String url;
 
-    private boolean estPrit;
+    private Boolean estPrit;
 
     private String detenteur;
 
@@ -48,11 +48,11 @@ public class ObjetDto implements Serializable {
         this.url = url;
     }
 
-    public boolean isEstPrit() {
+    public Boolean getEstPrit() {
         return estPrit;
     }
 
-    public void setEstPrit(boolean estPrit) {
+    public void setEstPrit(Boolean estPrit) {
         this.estPrit = estPrit;
     }
 
