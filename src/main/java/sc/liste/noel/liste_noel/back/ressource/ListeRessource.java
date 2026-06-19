@@ -1,29 +1,30 @@
 package sc.liste.noel.liste_noel.back.ressource;
 
-import jakarta.validation.constraints.NotBlank;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.liste_noel.back.dto.request.CreationListeRequest;
+import sc.liste.noel.liste_noel.back.dto.request.PubliqueRequest;
 import sc.liste.noel.liste_noel.back.dto.response.GeneriqueResponse;
 import sc.liste.noel.liste_noel.back.dto.response.ListeReponse;
+import sc.liste.noel.liste_noel.back.dto.response.ListesReponse;
 import sc.liste.noel.liste_noel.back.dto.response.MesListesResponse;
+import sc.liste.noel.liste_noel.back.exception.ListeNotFoundException;
+import sc.liste.noel.liste_noel.back.exception.ModificationInterditeException;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
-import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
 import sc.liste.noel.liste_noel.back.dto.ListeDto;
 import sc.liste.noel.liste_noel.back.dto.ListeContexteDto;
 import sc.liste.noel.liste_noel.back.dto.ObjetDto;
 import sc.liste.noel.liste_noel.back.service.MessageService;
-import sc.liste.noel.liste_noel.back.Constantes;
+import sc.liste.noel.liste_noel.back.mapper.Constantes;
 
 import java.security.Principal;
 import java.util.List;
 import java.util.Locale;
 
-import static sc.liste.noel.liste_noel.back.Constantes.API_LISTE_ERREUR_KEY;
-import static sc.liste.noel.liste_noel.back.Constantes.API_SECRET_INVALID_KEY;
+import static sc.liste.noel.liste_noel.back.mapper.Constantes.*;
 
 @RestController
 @RequestMapping("/api/liste")
@@ -56,11 +57,15 @@ public class ListeRessource {
 
     @GetMapping("/{idListe}")
     public ResponseEntity<ListeReponse> getUneListe(Principal principal,
-                                                    @PathVariable String idListe) {
+                                                    @PathVariable String idListe,
+                                                    Locale locale) {
         String email = principal != null ? principal.getName() : null;
         try {
             ListeContexteDto liste = listeServiceInterface.getListeAvecContexte(Long.valueOf(idListe), email);
             return ResponseEntity.ok(new ListeReponse("Succes", Constantes.RETOUR_API_OK, liste, liste.isEstProprietaire(), liste.isEstFavoris()));
+        } catch (ListeNotFoundException e) {
+            LOGGER.warn("La liste {} est introuvalbe en BDD", idListe);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ListeReponse(messageService.getMessage(LISTE_INTROUVABLE, locale), Constantes.RETOUR_API_KO));
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la récupération de la listes " + idListe, e);
             return ResponseEntity.internalServerError().build();
@@ -84,7 +89,7 @@ public class ListeRessource {
     public ResponseEntity<GeneriqueResponse> creerUneListe(Principal principal,
                                                            @RequestBody CreationListeRequest listeRequest) {
         String email = principal.getName();
-        listeServiceInterface.creerListe(email, listeRequest.getNomListe());
+        listeServiceInterface.creerListe(email, listeRequest.getNomListe(), listeRequest.getPublique());
         return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
     }
 
@@ -114,6 +119,37 @@ public class ListeRessource {
             return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new GeneriqueResponse(messageService.getMessage(API_LISTE_ERREUR_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
+    @GetMapping("/publiques")
+    public ResponseEntity<ListesReponse> getPubliqueListe(@RequestParam(name = "recherche", defaultValue = "") String recherche, Locale locale) {
+        try {
+            List<ListeDto> listes = listeServiceInterface.getListes(true, recherche);
+
+            ListesReponse reponse = new ListesReponse("Succes", Constantes.RETOUR_API_OK, listes);
+
+            return ResponseEntity.ok(reponse);
+        } catch (ListeNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ListesReponse(messageService.getMessage(LISTE_INTROUVABLE, locale), Constantes.RETOUR_API_KO));
+        }
+    }
+
+    @PutMapping("/{idListe}/publique")
+    public ResponseEntity<GeneriqueResponse> updatePublique(@PathVariable String idListe,
+                                                            @RequestBody PubliqueRequest publiqueRequest,
+                                                            Locale locale,
+                                                            Principal principal) {
+        String email = principal.getName();
+        try {
+            listeServiceInterface.updatePublique(Long.valueOf(idListe), publiqueRequest.getPublique(), email);
+            return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
+        } catch (ListeNotFoundException e) {
+            LOGGER.warn(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new GeneriqueResponse(messageService.getMessage(LISTE_INTROUVABLE, locale), Constantes.RETOUR_API_KO));
+        } catch (ModificationInterditeException e) {
+            LOGGER.warn(e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GeneriqueResponse(messageService.getMessage(MODIFICATION_INTERDITE, locale), Constantes.RETOUR_API_KO));
         }
     }
 }

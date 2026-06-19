@@ -2,10 +2,7 @@ package sc.liste.noel.liste_noel.back.ressource;
 
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.AssertTrue;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,13 +25,13 @@ import sc.liste.noel.liste_noel.back.service.JwtService;
 import sc.liste.noel.liste_noel.back.service.SecretServiceInterface;
 import sc.liste.noel.liste_noel.back.dto.CompteDto;
 import sc.liste.noel.liste_noel.back.service.MessageService;
-import sc.liste.noel.liste_noel.back.Constantes;
+import sc.liste.noel.liste_noel.back.mapper.Constantes;
 
 import java.security.Principal;
 import java.time.Duration;
 import java.util.Locale;
 
-import static sc.liste.noel.liste_noel.back.Constantes.*;
+import static sc.liste.noel.liste_noel.back.mapper.Constantes.*;
 
 @RestController
 @RequestMapping("/api/compte")
@@ -84,13 +81,13 @@ public class CompteRessource {
                     .secure(true)                       // HTTPS uniquement (false en dev local)
                     .path("/")                          // valable sur toutes les routes
                     .maxAge(Duration.ofSeconds(86400))  // 24h, comme jwt.expiration
-                    .sameSite("Strict")                 // protection CSRF
+                    .sameSite("None")                 // protection CSRF
                     .build();
 
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(Constantes.API_COMPTE_CREATION_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
+                    .body(new CompteResponse(inscriptionRequest.getEmail(), inscriptionRequest.getPseudo(), messageService.getMessage(Constantes.API_COMPTE_CREATION_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
 
         } catch (Exception e) {
             LOGGER.error("Erreur lors de la création du compte pour l'email : " + inscriptionRequest.getEmail(), e);
@@ -116,12 +113,12 @@ public class CompteRessource {
                     .secure(true)                       // HTTPS uniquement (false en dev local)
                     .path("/")                          // valable sur toutes les routes
                     .maxAge(Duration.ofSeconds(86400))  // 24h, comme jwt.expiration
-                    .sameSite("Strict")                 // protection CSRF
+                    .sameSite("None")                 // protection CSRF
                     .build();
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(new CompteResponse(compte.getEmail(), "Connexion réussie", RETOUR_API_OK));
+                    .body(new CompteResponse(compte.getEmail(), compte.getPseudo(), "Connexion réussie", RETOUR_API_OK));
 
         } catch (CompteNotFoundException exception) {
             return ResponseEntity.ok()
@@ -143,7 +140,7 @@ public class CompteRessource {
                 .secure(true)
                 .path("/")
                 .maxAge(0)          // ← c'est ça qui supprime le cookie
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
 
         return ResponseEntity.ok()
@@ -189,6 +186,28 @@ public class CompteRessource {
             return ResponseEntity.internalServerError()
                     .body(new CompteResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constantes.RETOUR_API_KO));
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<CompteResponse> getMe(Principal principal, Locale locale) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Si principal n'est pas null, Spring Security a validé le cookie/token
+        String email = principal.getName();
+        String pseudo;
+        try {
+            pseudo = compteService.getPseudo(email);
+        } catch (CompteNotFoundException e) {
+            LOGGER.warn("Le compte {} est introuvable", email);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new CompteResponse(email, messageService.getMessage(COMPTE_INTROUVABLE, locale), Constantes.RETOUR_API_KO));
+        } catch (Exception e) {
+            LOGGER.error("[getMe] Une erreur est survenue : {}", email, e);
+            return ResponseEntity.internalServerError()
+                    .body(new CompteResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constantes.RETOUR_API_KO));
+        }
+        return ResponseEntity.ok(new CompteResponse(email, pseudo, "Session active", RETOUR_API_OK));
     }
 
     /**

@@ -1,5 +1,6 @@
 package sc.liste.noel.liste_noel.back.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,13 +10,19 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 import sc.liste.noel.liste_noel.back.service.JwtAuthFilter;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+
+    @Value("${url.front}")
+    private String urlFront;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
@@ -24,6 +31,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(request -> {
+                    CorsConfiguration config = new CorsConfiguration();
+                    config.setAllowedOrigins(List.of(
+                            urlFront
+                    ));
+                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(List.of("*"));
+                    config.setAllowCredentials(true);
+                    return config;
+                }))
                 // Désactive CSRF : on est protégé par le cookie SameSite=Strict + JWT
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -32,24 +49,14 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 ).exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
-                            // Si c'est un appel API → renvoie 401 en JSON
-                            if (request.getRequestURI().startsWith("/api/compte/")) {
-                                response.setStatus(401);
-                                response.setContentType("application/json");
-                                response.getWriter().write("{\"messageRetour\":\"Non autorisé\",\"codeRetour\":1}");
-                            } else {
-                                // Si c'est une page → redirige vers connexion
-                                response.sendRedirect("/connexion");
-                            }
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"messageRetour\":\"Non autorisé\",\"codeRetour\":1}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            if (request.getRequestURI().startsWith("/api/compte/")) {
-                                response.setStatus(403);
-                                response.setContentType("application/json");
-                                response.getWriter().write("{\"messageRetour\":\"Accès refusé\",\"codeRetour\":1}");
-                            } else {
-                                response.sendRedirect("/connexion");
-                            }
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"messageRetour\":\"Accès refusé\",\"codeRetour\":1}");
                         })
                 )
                 // Définition des routes publiques et protégées
@@ -62,20 +69,7 @@ public class SecurityConfig {
                                 "/api/compte/**",
                                 "/api/liste/*",
                                 "/error",
-                                "/connexion",
-
-                                // Tes anciennes routes Thymeleaf (à supprimer au fur et à mesure)
-                                "/welcome",
-                                "/liste",
-                                "/connexion",
-                                "/inscription",
-                                "/",
-                                // ... toutes tes autres routes Thymeleaf
-
-                                // Ressources statiques (CSS, JS, images)
-                                "/css/**",
-                                "/js/**",
-                                "/images/**"
+                                "/health"
                         ).permitAll()
                         // Toutes les autres routes nécessitent d'être connecté
                         .anyRequest().authenticated()

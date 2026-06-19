@@ -8,6 +8,10 @@ public class ListeReponse extends GeneriqueResponse{
     private boolean estProprietaire;
     private boolean estEnFavoris;
 
+    public ListeReponse(String messageRetour, int codeRetour) {
+        super(messageRetour, codeRetour);
+    }
+
     public ListeReponse(String messageRetour, int codeRetour, ListeDto listeCadeaux) {
         super(messageRetour, codeRetour);
         this.listeCadeaux = listeCadeaux;

@@ -12,7 +12,7 @@ import sc.liste.noel.liste_noel.back.exception.MotDePasseException;
 import sc.liste.noel.liste_noel.back.service.CompteServiceInterface;
 import sc.liste.noel.liste_noel.back.utils.PasswordUtils;
 import sc.liste.noel.liste_noel.back.service.PasswordService;
-import sc.liste.noel.liste_noel.back.CompteMapper;
+import sc.liste.noel.liste_noel.back.mapper.CompteMapper;
 import sc.liste.noel.liste_noel.back.dto.CompteDto;
 import sc.liste.noel.liste_noel.back.dto.TokenDto;
 
@@ -46,6 +46,15 @@ public class CompteServiceImpl implements CompteServiceInterface {
     @Override
     public boolean compteExiste(String cossy) {
         return Optional.ofNullable(compteRepo.findByEmail(cossy)).isPresent();
+    }
+
+    @Override
+    public String getPseudo(String email) throws CompteNotFoundException {
+        CompteEntity compte = compteRepo.findByEmail(email);
+        if(compte == null) {
+            throw new CompteNotFoundException("Compte introuvable");
+        }
+        return compte.getPseudo();
     }
 
     @Override
