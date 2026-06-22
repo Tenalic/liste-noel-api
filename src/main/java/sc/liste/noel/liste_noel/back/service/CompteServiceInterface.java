@@ -5,6 +5,8 @@ import sc.liste.noel.liste_noel.back.exception.MotDePasseException;
 import sc.liste.noel.liste_noel.back.dto.CompteDto;
 import sc.liste.noel.liste_noel.back.exception.CompteNotFoundException;
 
+import java.io.IOException;
+
 public interface CompteServiceInterface {
 
     /**
@@ -44,7 +46,7 @@ public interface CompteServiceInterface {
      * @param password : mot de passe joueur
      * @return true si tout s'est bien passé
      */
-    String creationCompte(String email, String password, boolean cguAccepted, String pseudo);
+    String creationCompte(String email, String password, boolean cguAccepted, String pseudo) throws IOException;
 
     /**
      * Supprime en base de données le compte avec le email donné
@@ -60,28 +62,8 @@ public interface CompteServiceInterface {
      * @param email       : email compte
      * @param oldPassword : ancien mot de passe
      * @param newPassword : nouveau mot de passe
-     * @return true si tout s'est bien passé
      */
-    boolean updatePassword(String email, String oldPassword, String newPassword);
-
-    /**
-     * Met a jour le password du compte
-     *
-     * @param email       : email compte
-     * @param oldPassword : ancien mot de passe
-     * @param newPassword : nouveau mot de passe
-     * @return true si tout s'est bien passé
-     */
-    boolean updatePassword(String email, String oldPassword, String newPassword, String confirmationNewPassword) throws CompteNotFoundException, MotDePasseException;
-
-
-    /**
-     * augmente le nombre de deconexion du compte
-     *
-     * @param email : email du compte
-     * @return true si cela c'est bien passé, false sinon
-     */
-    boolean deconexion(String email);
+    void updatePassword(String email, String oldPassword, String newPassword, String confirmationNewPassword) throws CompteNotFoundException, MotDePasseException;
 
     void genererMotDePasseEtEnvoyer(String email) throws MailServiceDesactivedException;
 

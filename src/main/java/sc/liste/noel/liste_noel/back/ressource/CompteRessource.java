@@ -5,7 +5,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -39,14 +38,20 @@ public class CompteRessource {
 
     private static final Logger LOGGER = LogManager.getLogger(CompteRessource.class);
 
-    @Autowired
-    private CompteServiceInterface compteService;
-    @Autowired
-    private SecretServiceInterface secretService;
-    @Autowired
-    private MessageService messageService;
-    @Autowired
-    private JwtService jwtService;
+    private final CompteServiceInterface compteService;
+
+    private final SecretServiceInterface secretService;
+
+    private final MessageService messageService;
+
+    private final JwtService jwtService;
+
+    public CompteRessource(CompteServiceInterface compteService, SecretServiceInterface secretService, MessageService messageService, JwtService jwtService) {
+        this.compteService = compteService;
+        this.secretService = secretService;
+        this.messageService = messageService;
+        this.jwtService = jwtService;
+    }
 
     /**
      * API permettant de créer un nouveau compte.
@@ -155,7 +160,7 @@ public class CompteRessource {
             return ResponseEntity.ok().body(new GeneriqueResponse(messageService.getMessage(MOT_DE_PASSE_OUBLIE_P1_KEY, locale) + motDePasseOublieRequest.getEmail()
                     + " " + messageService.getMessage(MOT_DE_PASSE_OUBLIE_P2_KEY, locale), Constantes.RETOUR_API_OK));
         } catch (MailServiceDesactivedException e) {
-            LOGGER.warn("L'envois d'email est désactivé, le mot de passe pour le compte {} n\'a pas été généré", motDePasseOublieRequest.getEmail());
+            LOGGER.warn("L'envois d'email est désactivé, le mot de passe pour le compte {} n'a pas été généré", motDePasseOublieRequest.getEmail());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GeneriqueResponse(messageService.getMessage(EMAIL_DESACTIVETED, locale), Constantes.RETOUR_API_KO));
         } catch (Exception e) {
             LOGGER.error("[mot-de-passe-oublie] Une erreur est survenu", e);

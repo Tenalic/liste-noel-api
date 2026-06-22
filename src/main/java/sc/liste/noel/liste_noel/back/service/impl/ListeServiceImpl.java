@@ -1,7 +1,6 @@
 package sc.liste.noel.liste_noel.back.service.impl;
 
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import sc.liste.noel.liste_noel.back.mapper.ListeMapper;
@@ -15,6 +14,7 @@ import sc.liste.noel.liste_noel.back.db.repo.ListeRepo;
 import sc.liste.noel.liste_noel.back.db.repo.ObjetRepo;
 import sc.liste.noel.liste_noel.back.exception.ListeNotFoundException;
 import sc.liste.noel.liste_noel.back.exception.ModificationInterditeException;
+import sc.liste.noel.liste_noel.back.service.EmailTemplateService;
 import sc.liste.noel.liste_noel.back.service.ListeServiceInterface;
 import sc.liste.noel.liste_noel.back.dto.ListeContexteDto;
 import sc.liste.noel.liste_noel.back.dto.ListeDto;
@@ -26,41 +26,43 @@ import java.util.Optional;
 
 @Service
 public class ListeServiceImpl implements ListeServiceInterface {
-    @Autowired
-    private ListeRepo listeRepo;
 
-    @Autowired
-    private ObjetRepo objetRepo;
+    private final ListeRepo listeRepo;
 
-    @Autowired
-    private FavorisRepo favorisRepo;
+    private final ObjetRepo objetRepo;
 
-    @Autowired
-    private CompteRepo compteRepo;
+    private final FavorisRepo favorisRepo;
+
+    private final CompteRepo compteRepo;
 
     @Value("${base_url}")
     private String baseUrl;
 
-    @Autowired
-    private MailService mailService;
+    private final MailService mailService;
 
     @Value("${send_email_active}")
     private Boolean mailServiceActived;
 
+    private final EmailTemplateService emailTemplateService;
+
+    public ListeServiceImpl(ListeRepo listeRepo, ObjetRepo objetRepo, FavorisRepo favorisRepo, CompteRepo compteRepo, MailService mailService, EmailTemplateService emailTemplateService) {
+        this.listeRepo = listeRepo;
+        this.objetRepo = objetRepo;
+        this.favorisRepo = favorisRepo;
+        this.compteRepo = compteRepo;
+        this.mailService = mailService;
+        this.emailTemplateService = emailTemplateService;
+    }
+
     @Override
-    public ListeDto creerListe(String proprietaire, String nomListe, boolean publique) {
+    public void creerListe(String proprietaire, String nomListe, boolean publique) {
 
         ListeEntity listeEntity = new ListeEntity();
         listeEntity.setNomListe(nomListe);
         listeEntity.setProprietaire(proprietaire);
         listeEntity.setPublique(publique);
 
-        try {
-            listeRepo.save(listeEntity);
-            return new ListeDto();
-        } catch (Exception e) {
-            return null;
-        }
+        listeRepo.save(listeEntity);
     }
 
     @Override
@@ -85,8 +87,8 @@ public class ListeServiceImpl implements ListeServiceInterface {
     @Override
     public List<ListeDto> getListes(boolean publique, String nomListe) throws ListeNotFoundException {
         List<ListeEntity> listeEntities;
-        boolean isRechercheParNon = nomListe != null && !nomListe.isBlank();
-        if (isRechercheParNon) {
+        boolean isRechercheParNom = nomListe != null && !nomListe.isBlank();
+        if (isRechercheParNom) {
             listeEntities = listeRepo.findByPubliqueAndNomListeContainingIgnoreCase(publique, nomListe);
         } else {
             listeEntities = listeRepo.findByPublique(publique);
@@ -96,11 +98,11 @@ public class ListeServiceImpl implements ListeServiceInterface {
         if (listeDtos != null) {
             listeDtos.forEach(listeDto -> {
                         listeDto.setUrlPartage(ListeMapper.buildUrlPartage(baseUrl, listeDto.getIdListe()));
-                        this.transcoEmailToPPseudo(listeDto);
+                        this.remplacerEmailsParPseudo(listeDto);
                     }
             );
         } else {
-            throw new ListeNotFoundException("Aucune liste trouvé" + (isRechercheParNon ? " " + nomListe : ""));
+            throw new ListeNotFoundException("Aucune liste trouvé" + (isRechercheParNom ? " " + nomListe : ""));
         }
         return listeDtos;
     }
@@ -109,7 +111,7 @@ public class ListeServiceImpl implements ListeServiceInterface {
     @Override
     public void updatePublique(Long idListe, boolean publique, String email) throws ModificationInterditeException, ListeNotFoundException {
         ListeEntity listeEntity = listeRepo.findByIdListe(idListe);
-        if(listeEntity == null) {
+        if (listeEntity == null) {
             throw new ListeNotFoundException("Liste introuvable");
         }
         if (listeEntity.getProprietaire().equals(email)) {
@@ -133,26 +135,6 @@ public class ListeServiceImpl implements ListeServiceInterface {
         objetRepo.save(objetEntity);
     }
 
-    @Override
-    @Transactional
-    public void prendreUnObjet(String idListe, String idObjet, String personne, String pseudo) {
-        ObjetEntity objetEntity = objetRepo.findByIdObjet(Long.valueOf(idObjet));
-        objetEntity.setDetenteur(personne);
-        objetEntity.setPseudoDetenteur(pseudo);
-        objetEntity.setEstPrit(true);
-        objetRepo.save(objetEntity);
-    }
-
-    @Override
-    @Transactional
-    public void nePlusPrendreUnObjet(String idObjet) {
-        ObjetEntity objetEntity = objetRepo.findByIdObjet(Long.valueOf(idObjet));
-        objetEntity.setDetenteur(null);
-        objetEntity.setPseudoDetenteur(null);
-        objetEntity.setEstPrit(false);
-        objetRepo.save(objetEntity);
-    }
-
 
     public List<ListeDto> getListeFavorisOfEmail(String email) {
         List<FavorisEntity> favorisEntityList = favorisRepo.findByEmail(email);
@@ -169,22 +151,17 @@ public class ListeServiceImpl implements ListeServiceInterface {
             }
         }
 
-        return transcoEmailToPPseudo(ListeMapper.entitiesToDtosSansListeObjet(list));
+        return remplacerEmailsParPseudo(ListeMapper.entitiesToDtosSansListeObjet(list));
     }
 
-    public boolean checkifListeInFavoris(Long idListe, String email) {
-        return favorisRepo.findByEmailAndIdListe(email, idListe) != null;
-    }
-
-
-    private List<ListeDto> transcoEmailToPPseudo(List<ListeDto> list) {
+    private List<ListeDto> remplacerEmailsParPseudo(List<ListeDto> list) {
         for (ListeDto listeDto : list) {
             listeDto.setProprietaire(compteRepo.findByEmail(listeDto.getProprietaire()).getPseudo());
         }
         return list;
     }
 
-    private void transcoEmailToPPseudo(ListeDto list) {
+    private void remplacerEmailsParPseudo(ListeDto list) {
         list.setProprietaire(compteRepo.findByEmail(list.getProprietaire()).getPseudo());
     }
 
@@ -197,15 +174,6 @@ public class ListeServiceImpl implements ListeServiceInterface {
             favorisEntity.setEmail(email);
             favorisEntity.setIdListe(idListe);
             favorisRepo.save(favorisEntity);
-        }
-    }
-
-    @Transactional
-    @Override
-    public void supprimerFavori(Long idListe, String email) {
-        FavorisEntity favorisEntityList = favorisRepo.findByEmailAndIdListe(email, idListe);
-        if (favorisEntityList != null) {
-            favorisRepo.delete(favorisEntityList);
         }
     }
 
@@ -234,12 +202,13 @@ public class ListeServiceImpl implements ListeServiceInterface {
                 throw new ModificationInterditeException("Vous ne pouvez pas supprimer un objet qui n'appartient pas à l'une de vos liste");
             }
 
+
             if (mailServiceActived) {
-                String bodyEmail = "L'objet " + objetEntity.getTitre() + " : " + objetEntity.getDescription() + " " + objetEntity.getUrl()
-                        + " a été supprimé de la liste " + listeEntity.getNomListe()
-                        + " qui fait partie de vos favoris" + " consulter la liste : \n\n"
-                        + ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe());
-                ;
+                String bodyEmail = emailTemplateService.generateBodySuppressionObjet(objetEntity.getTitre(),
+                        objetEntity.getDescription(),
+                        objetEntity.getUrl(),
+                        listeEntity.getNomListe(),
+                        ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe()));
                 String sujetEmail = "Objet supprimé de la liste : " + listeEntity.getNomListe();
 
                 List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
@@ -266,10 +235,16 @@ public class ListeServiceImpl implements ListeServiceInterface {
                 throw new ModificationInterditeException("Vous ne pouvez pas modifier un objet qui n'appartient pas à l'une de vos liste");
             }
 
-            String bodyEmail = "L'objet " + objetEntity.getTitre() + " : " + objetEntity.getDescription() + " - " + objetEntity.getUrl()
-                    + " a été modifié dans la liste " + listeEntity.getNomListe()
-                    + " qui fait partie de vos favoris.\n\n Voici les nouvelles informations :\n\n " + titreUpdate + " : " + descriptionUpdate + " - " + urlUpdate + " " + ObjetMapper.transcoPriorite(prioriteUpdate) + " \n\n consulter la liste : "
-                    + ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe());
+            String bodyEmail = emailTemplateService.generateBodyModificationObjet(objetEntity.getTitre(),
+                    objetEntity.getDescription(),
+                    objetEntity.getUrl(),
+                    titreUpdate,
+                    descriptionUpdate,
+                    urlUpdate,
+                    ObjetMapper.transcoPriorite(prioriteUpdate),
+                    listeEntity.getNomListe(),
+                    ListeMapper.buildUrlPartage(baseUrl, listeEntity.getIdListe())
+            );
             String sujetEmail = "Objet modifié dans la liste : " + listeEntity.getNomListe();
 
             List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
@@ -287,33 +262,19 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
     @Transactional
     @Override
-    public String supprimerListe(String nomListe, String emailListe) {
-        ListeEntity listeEntity = listeRepo.findByProprietaireAndNomListe(emailListe, nomListe);
-        if (listeEntity != null) {
-            List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
-            for (FavorisEntity favorisEntity : favorisEntityList) {
-                favorisRepo.delete(favorisEntity);
-            }
-            listeRepo.delete(listeEntity);
-            return "La liste " + emailListe + " à bien été supprimé";
-        } else {
-            return "La liste " + emailListe + " est introuvable, elle ne peux pas être supprimée";
-        }
-    }
-
-    @Transactional
-    @Override
-    public String supprimerListe(Long idListe) {
+    public String supprimerListe(Long idListe, String email) throws ModificationInterditeException, ListeNotFoundException {
         ListeEntity listeEntity = listeRepo.findByIdListe(idListe);
         if (listeEntity != null) {
-            List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
-            for (FavorisEntity favorisEntity : favorisEntityList) {
-                favorisRepo.delete(favorisEntity);
+            if (listeEntity.getProprietaire().equals(email)) {
+                List<FavorisEntity> favorisEntityList = favorisRepo.findByIdListe(listeEntity.getIdListe());
+                favorisRepo.deleteAll(favorisEntityList);
+                listeRepo.delete(listeEntity);
+                return "La liste " + listeEntity.getNomListe() + " à bien été supprimé";
+            } else {
+                throw new ModificationInterditeException("Vous ne pouvez pas supprimer une liste qui ne vous appartient pas");
             }
-            listeRepo.delete(listeEntity);
-            return "La liste " + listeEntity.getNomListe() + " à bien été supprimé";
         } else {
-            return "La liste " + idListe + " est introuvable, elle ne peux pas être supprimée";
+            throw new ListeNotFoundException("Liste introuvable");
         }
     }
 
@@ -325,8 +286,9 @@ public class ListeServiceImpl implements ListeServiceInterface {
 
         listeContexte.setEstProprietaire(liste.getProprietaire().equals(email));
 
+        this.remplacerEmailsParPseudo(listeContexte);
+
         if (email != null) {
-            this.transcoEmailToPPseudo(listeContexte);
             if (!listeContexte.isEstProprietaire()) {
                 listeContexte.setEstFavoris(
                         this.getListeFavorisOfEmail(email)
