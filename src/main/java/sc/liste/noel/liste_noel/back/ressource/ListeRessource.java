@@ -89,7 +89,7 @@ public class ListeRessource {
     public ResponseEntity<GeneriqueResponse> creerUneListe(Principal principal,
                                                            @RequestBody CreationListeRequest listeRequest) {
         String email = principal.getName();
-        listeServiceInterface.creerListe(email, listeRequest.getNomListe(), listeRequest.getPublique());
+        listeServiceInterface.creerListe(email, listeRequest.nomListe(), listeRequest.publique());
         return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
     }
 
@@ -148,7 +148,7 @@ public class ListeRessource {
                                                             Principal principal) {
         String email = principal.getName();
         try {
-            listeServiceInterface.updatePublique(Long.valueOf(idListe), publiqueRequest.getPublique(), email);
+            listeServiceInterface.updatePublique(Long.valueOf(idListe), publiqueRequest.publique(), email);
             return ResponseEntity.ok(new GeneriqueResponse("Succes", Constantes.RETOUR_API_OK));
         } catch (ListeNotFoundException e) {
             LOGGER.warn(e.getMessage());

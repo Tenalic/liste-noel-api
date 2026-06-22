@@ -66,17 +66,17 @@ public class CompteRessource {
             Locale locale) {
         try {
             // Vérification de l'existence du compte
-            if (compteService.compteExiste(inscriptionRequest.getEmail())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(COMPTE_EXISTE_KEY, locale), Constantes.RETOUR_API_KO));
+            if (compteService.compteExiste(inscriptionRequest.email())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(new CompteResponse(inscriptionRequest.email(), messageService.getMessage(COMPTE_EXISTE_KEY, locale), Constantes.RETOUR_API_KO));
             }
 
             // Vérification de l'existence du pseudo
-            if (compteService.pseudoExiste(inscriptionRequest.getPseudo())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(PSEUDO_EXISTE_KEY, locale), Constantes.RETOUR_API_KO));
+            if (compteService.pseudoExiste(inscriptionRequest.pseudo())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(new CompteResponse(inscriptionRequest.pseudo(), messageService.getMessage(PSEUDO_EXISTE_KEY, locale), Constantes.RETOUR_API_KO));
             }
 
             // Création du compte
-            String email = compteService.creationCompte(inscriptionRequest.getEmail(), inscriptionRequest.getPassword(), inscriptionRequest.getAcceptCGU(), inscriptionRequest.getPseudo());
+            String email = compteService.creationCompte(inscriptionRequest.email(), inscriptionRequest.password(), inscriptionRequest.acceptCGU(), inscriptionRequest.pseudo());
 
             String token = jwtService.genererToken(email);
 
@@ -92,23 +92,23 @@ public class CompteRessource {
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(new CompteResponse(inscriptionRequest.getEmail(), inscriptionRequest.getPseudo(), messageService.getMessage(Constantes.API_COMPTE_CREATION_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
+                    .body(new CompteResponse(inscriptionRequest.email(), inscriptionRequest.pseudo(), messageService.getMessage(Constantes.API_COMPTE_CREATION_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
 
         } catch (Exception e) {
-            LOGGER.error("Erreur lors de la création du compte pour l'email : " + inscriptionRequest.getEmail(), e);
-            return ResponseEntity.internalServerError().body(new CompteResponse(inscriptionRequest.getEmail(), messageService.getMessage(COMPTE_ERROR_KEY, locale), Constantes.RETOUR_API_KO));
+            LOGGER.error("Erreur lors de la création du compte pour l'email : " + inscriptionRequest.email(), e);
+            return ResponseEntity.internalServerError().body(new CompteResponse(inscriptionRequest.email(), messageService.getMessage(COMPTE_ERROR_KEY, locale), Constantes.RETOUR_API_KO));
         }
     }
 
     @PostMapping("/connexion")
     public ResponseEntity<CompteResponse> connexion(@RequestBody @Valid ConnexionRequest connexionRequest,
                                                     Locale locale) {
-        String email = connexionRequest.getEmail();
+        String email = connexionRequest.email();
 
         LOGGER.info("Entrée service connexion : " + email);
 
         try {
-            CompteDto compte = compteService.connexion(email, connexionRequest.getPassword());
+            CompteDto compte = compteService.connexion(email, connexionRequest.password());
 
             String token = jwtService.genererToken(compte.getEmail());
 
@@ -156,11 +156,11 @@ public class CompteRessource {
     @PostMapping("/mot-de-passe-oublie")
     public ResponseEntity<GeneriqueResponse> motDePasseOublie(@RequestBody MotDePasseOublieRequest motDePasseOublieRequest, Locale locale) {
         try {
-            compteService.genererMotDePasseEtEnvoyer(motDePasseOublieRequest.getEmail());
-            return ResponseEntity.ok().body(new GeneriqueResponse(messageService.getMessage(MOT_DE_PASSE_OUBLIE_P1_KEY, locale) + motDePasseOublieRequest.getEmail()
+            compteService.genererMotDePasseEtEnvoyer(motDePasseOublieRequest.email());
+            return ResponseEntity.ok().body(new GeneriqueResponse(messageService.getMessage(MOT_DE_PASSE_OUBLIE_P1_KEY, locale) + motDePasseOublieRequest.email()
                     + " " + messageService.getMessage(MOT_DE_PASSE_OUBLIE_P2_KEY, locale), Constantes.RETOUR_API_OK));
         } catch (MailServiceDesactivedException e) {
-            LOGGER.warn("L'envois d'email est désactivé, le mot de passe pour le compte {} n'a pas été généré", motDePasseOublieRequest.getEmail());
+            LOGGER.warn("L'envois d'email est désactivé, le mot de passe pour le compte {} n'a pas été généré", motDePasseOublieRequest.email());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GeneriqueResponse(messageService.getMessage(EMAIL_DESACTIVETED, locale), Constantes.RETOUR_API_KO));
         } catch (Exception e) {
             LOGGER.error("[mot-de-passe-oublie] Une erreur est survenu", e);
@@ -176,7 +176,7 @@ public class CompteRessource {
         String email = principal.getName();
 
         try {
-            compteService.updatePassword(email, modifierMotDePasseRequest.getAncienMotDePasse(), modifierMotDePasseRequest.getNouveauMotDePasse(), modifierMotDePasseRequest.getConfirmationMotDePasse());
+            compteService.updatePassword(email, modifierMotDePasseRequest.ancienMotDePasse(), modifierMotDePasseRequest.nouveauMotDePasse(), modifierMotDePasseRequest.confirmationMotDePasse());
             return ResponseEntity.ok(new CompteResponse(email, messageService.getMessage(API_COMPTE_PASSWORD_UPDATE_SUCCES_KEY, locale), Constantes.RETOUR_API_OK));
         } catch (CompteNotFoundException exception) {
             LOGGER.warn("[update-password] Compte introuvable, le mot de passe ne doit pas être correcte pour l'email : {}", email);
