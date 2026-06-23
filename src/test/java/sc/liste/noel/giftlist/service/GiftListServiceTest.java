@@ -337,13 +337,13 @@ class GiftListServiceTest {
         }
 
         @Test
-        @DisplayName("retourne null si favoriteRepo retourne null")
-        void returnsNull_whenFavoriteRepoReturnsNull() throws AccountNotFoundException {
+        @DisplayName("retourne liste vide si favoriteRepo retourne null")
+        void returnsEmptyList_whenFavoriteRepoReturnsNull() throws AccountNotFoundException {
             when(favoriteRepo.findByEmail("user@test.com")).thenReturn(null);
 
             List<GiftListDto> result = giftListService.getFavoriteGiftListsOfEmail("user@test.com");
 
-            assertThat(result).isNull();
+            assertThat(result).isEmpty();
         }
 
         @Test
