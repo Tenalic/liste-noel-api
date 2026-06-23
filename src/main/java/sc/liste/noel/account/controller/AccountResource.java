@@ -10,21 +10,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import sc.liste.noel.account.dto.request.LoginRequest;
-import sc.liste.noel.account.dto.request.RegistrationRequest;
+import sc.liste.noel.account.dto.AccountDto;
 import sc.liste.noel.account.dto.request.ChangePasswordRequest;
 import sc.liste.noel.account.dto.request.ForgotPasswordRequest;
+import sc.liste.noel.account.dto.request.LoginRequest;
+import sc.liste.noel.account.dto.request.RegistrationRequest;
 import sc.liste.noel.account.dto.response.AccountResponse;
-import sc.liste.noel.common.dto.response.GenericResponse;
-import sc.liste.noel.account.exception.AccountNotFoundException;
-import sc.liste.noel.account.exception.MailServiceDisabledException;
-import sc.liste.noel.account.exception.PasswordException;
-import sc.liste.noel.account.service.JwtService;
-import sc.liste.noel.account.dto.AccountDto;
-import sc.liste.noel.account.service.SecretService;
-import sc.liste.noel.common.service.MessageService;
-import sc.liste.noel.common.constant.Constants;
+import sc.liste.noel.account.exception.*;
 import sc.liste.noel.account.service.AccountService;
+import sc.liste.noel.account.service.JwtService;
+import sc.liste.noel.account.service.SecretService;
+import sc.liste.noel.common.constant.Constants;
+import sc.liste.noel.common.dto.response.GenericResponse;
+import sc.liste.noel.common.service.MessageService;
 
 import java.security.Principal;
 import java.time.Duration;
@@ -61,22 +59,11 @@ public class AccountResource {
      */
     @PostMapping("/inscription")
     public ResponseEntity<AccountResponse> register(
-            @RequestBody RegistrationRequest registrationRequest,
+            @RequestBody @Valid RegistrationRequest registrationRequest,
             @RequestHeader(value = "Accept-Language", required = false, defaultValue = "fr")
             Locale locale) {
         try {
-            // Check whether the account already exists
-            if (accountService.accountExists(registrationRequest.email())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(new AccountResponse(registrationRequest.email(), messageService.getMessage(ACCOUNT_EXISTS_KEY, locale), Constants.API_RETURN_KO));
-            }
-
-            // Check whether the pseudo already exists
-            if (accountService.pseudoExists(registrationRequest.pseudo())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(new AccountResponse(registrationRequest.pseudo(), messageService.getMessage(PSEUDO_EXISTS_KEY, locale), Constants.API_RETURN_KO));
-            }
-
-            // Create the account
-            String email = accountService.createAccount(registrationRequest.email(), registrationRequest.password(), registrationRequest.acceptTerms(), registrationRequest.pseudo());
+            String email = accountService.createAccount(registrationRequest.email(), registrationRequest.password(), registrationRequest.confirmPassword(), registrationRequest.acceptTerms(), registrationRequest.pseudo());
 
             String token = jwtService.generateToken(email);
 
@@ -89,13 +76,23 @@ public class AccountResource {
                     .sameSite("None")                 // CSRF protection
                     .build();
 
-
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
                     .body(new AccountResponse(registrationRequest.email(), registrationRequest.pseudo(), messageService.getMessage(Constants.API_ACCOUNT_CREATION_SUCCESS_KEY, locale), Constants.API_RETURN_OK));
-
+        } catch (AccountAlreadyExistsException e) {
+            LOGGER.warn("Account already exists {}", registrationRequest.email());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new AccountResponse(registrationRequest.email(), messageService.getMessage(ACCOUNT_EXISTS_KEY, locale), Constants.API_RETURN_KO));
+        } catch (PseudoAlreadyExistsException e) {
+            LOGGER.warn("Pseudo already exists {}", registrationRequest.pseudo());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new AccountResponse(registrationRequest.pseudo(), messageService.getMessage(PSEUDO_EXISTS_KEY, locale), Constants.API_RETURN_KO));
+        } catch (TermsNotAcceptedException e) {
+            LOGGER.warn("CGU not accepted {} {}", registrationRequest.email(), registrationRequest.pseudo());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new AccountResponse(messageService.getMessage(CGU, locale), Constants.API_RETURN_KO));
+        } catch (PasswordNotEqualsException e) {
+            LOGGER.warn("Password not equals {} {}", registrationRequest.email(), registrationRequest.pseudo());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new AccountResponse(messageService.getMessage(PASSWORD, locale), Constants.API_RETURN_KO));
         } catch (Exception e) {
-            LOGGER.error("Error while creating the account for the email: " + registrationRequest.email(), e);
+            LOGGER.error("Error while creating the account for the email: {}", registrationRequest.email(), e);
             return ResponseEntity.internalServerError().body(new AccountResponse(registrationRequest.email(), messageService.getMessage(ACCOUNT_ERROR_KEY, locale), Constants.API_RETURN_KO));
         }
     }
@@ -126,9 +123,9 @@ public class AccountResource {
                     .body(new AccountResponse(account.getEmail(), account.getPseudo(), "Connexion réussie", API_RETURN_OK));
 
         } catch (AccountNotFoundException exception) {
-            return ResponseEntity.ok()
-                    .body(new AccountResponse(email, messageService.getMessage(LOGIN_FAIL_KEY, locale)
-                            , API_RETURN_KO));
+            LOGGER.warn("[connexion] account not found {}", loginRequest.email());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AccountResponse(messageService.getMessage(ACCOUNT_NOT_FOUND, locale), Constants.API_RETURN_KO));
 
         } catch (Exception e) {
             LOGGER.error("Error during login: " + email, e);
@@ -154,7 +151,7 @@ public class AccountResource {
     }
 
     @PostMapping("/mot-de-passe-oublie")
-    public ResponseEntity<GenericResponse> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest, Locale locale) {
+    public ResponseEntity<GenericResponse> forgotPassword(@RequestBody @Valid ForgotPasswordRequest forgotPasswordRequest, Locale locale) {
         try {
             accountService.generateAndSendPassword(forgotPasswordRequest.email());
             return ResponseEntity.ok().body(new GenericResponse(messageService.getMessage(FORGOT_PASSWORD_P1_KEY, locale) + forgotPasswordRequest.email()
@@ -162,6 +159,11 @@ public class AccountResource {
         } catch (MailServiceDisabledException e) {
             LOGGER.warn("Email sending is disabled, the password for account {} was not generated", forgotPasswordRequest.email());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GenericResponse(messageService.getMessage(EMAIL_DISABLED, locale), Constants.API_RETURN_KO));
+        } catch (AccountNotFoundException e) {
+            LOGGER.warn("[mot-de-passe-oublie] account not found {}", forgotPasswordRequest.email());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new GenericResponse(messageService.getMessage(ACCOUNT_NOT_FOUND, locale), Constants.API_RETURN_KO));
+
         } catch (Exception e) {
             LOGGER.error("[mot-de-passe-oublie] An error occurred", e);
             return ResponseEntity.internalServerError()
@@ -253,7 +255,7 @@ public class AccountResource {
     public ResponseEntity<String> activateAccount(
             @RequestParam @NotBlank String email,
             @RequestParam @NotBlank String key,
-            Locale locale) {
+            Locale locale) throws AccountNotFoundException {
 
         boolean activated = accountService.activateUser(email, key);
         if (activated) {

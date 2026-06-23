@@ -3,7 +3,9 @@ package sc.liste.noel.giftlist.service;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import sc.liste.noel.account.db.entity.AccountEntity;
 import sc.liste.noel.account.db.repo.AccountRepo;
+import sc.liste.noel.account.exception.AccountNotFoundException;
 import sc.liste.noel.common.exception.ForbiddenModificationException;
 import sc.liste.noel.common.exception.GiftListNotFoundException;
 import sc.liste.noel.common.service.EmailTemplateService;
@@ -92,7 +94,11 @@ public class GiftListService {
         if (giftListDtos != null) {
             giftListDtos.forEach(giftListDto -> {
                         giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, giftListDto.getGiftListId()));
-                        this.replaceEmailsWithPseudo(giftListDto);
+                        try {
+                            this.replaceEmailsWithPseudo(giftListDto);
+                        } catch (AccountNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
             );
         } else {
@@ -118,7 +124,7 @@ public class GiftListService {
     }
 
 
-    public List<GiftListDto> getFavoriteGiftListsOfEmail(String email) {
+    public List<GiftListDto> getFavoriteGiftListsOfEmail(String email) throws AccountNotFoundException {
         List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByEmail(email);
 
         if (favoriteEntityList == null) {
@@ -136,15 +142,15 @@ public class GiftListService {
         return replaceEmailsWithPseudo(GiftListMapper.entitiesToDtosWithoutGifts(list));
     }
 
-    private List<GiftListDto> replaceEmailsWithPseudo(List<GiftListDto> list) {
+    private List<GiftListDto> replaceEmailsWithPseudo(List<GiftListDto> list) throws AccountNotFoundException {
         for (GiftListDto giftListDto : list) {
-            giftListDto.setOwner(accountRepo.findByEmail(giftListDto.getOwner()).getPseudo());
+            giftListDto.setOwner(accountRepo.findByEmail(giftListDto.getOwner()).map(AccountEntity::getPseudo).orElseThrow(() -> new AccountNotFoundException("Account not found")));
         }
         return list;
     }
 
-    private void replaceEmailsWithPseudo(GiftListDto giftListDto) {
-        giftListDto.setOwner(accountRepo.findByEmail(giftListDto.getOwner()).getPseudo());
+    private void replaceEmailsWithPseudo(GiftListDto giftListDto) throws AccountNotFoundException {
+        giftListDto.setOwner(accountRepo.findByEmail(giftListDto.getOwner()).map(AccountEntity::getPseudo).orElseThrow(() -> new AccountNotFoundException("Account not found")));
     }
 
     @Transactional
@@ -238,7 +244,7 @@ public class GiftListService {
     }
 
 
-    public GiftListContextDto getGiftListWithContext(Long id, String email) throws GiftListNotFoundException {
+    public GiftListContextDto getGiftListWithContext(Long id, String email) throws GiftListNotFoundException, AccountNotFoundException {
         GiftListDto giftList = this.getGiftListById(id);
 
         GiftListContextDto giftListContext = new GiftListContextDto(giftList);

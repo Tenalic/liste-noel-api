@@ -22,6 +22,10 @@ public class AccountResponse extends GenericResponse {
         this.email = email;
     }
 
+    public AccountResponse(String returnMessage, int returnCode) {
+        super(returnMessage, returnCode);
+    }
+
     public AccountResponse(String email, String pseudo, String returnMessage, int returnCode) {
         super(returnMessage, returnCode);
         this.email = email;

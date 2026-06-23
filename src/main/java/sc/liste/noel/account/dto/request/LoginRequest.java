@@ -8,7 +8,7 @@ import static sc.liste.noel.common.constant.Constants.API_ACCOUNT_PASSWORD_REQUI
 
 public record LoginRequest(
         @NotBlank(message = API_ACCOUNT_EMAIL_REQUIRED_KEY)
-        @Email
+        @Email(message = "{email.required}")
         String email,
 
         @NotBlank(message = API_ACCOUNT_PASSWORD_REQUIRED)

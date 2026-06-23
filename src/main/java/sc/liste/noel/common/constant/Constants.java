@@ -31,6 +31,8 @@ public class Constants {
     public static final String API_ERROR_GENERIC_KEY = "api.error.generic";
     public static final String ACCOUNT_EXISTS_KEY = "compteExiste";
     public static final String PSEUDO_EXISTS_KEY = "pseudoExiste";
+    public static final String CGU = "cgu";
+    public static final String PASSWORD = "password";
     public static final String ACCOUNT_ERROR_KEY = "compteError";
     public static final String LOGIN_FAIL_KEY = "connexionFail";
     public static final String EMAIL_DISABLED = "api.compte.mail.desactive";
