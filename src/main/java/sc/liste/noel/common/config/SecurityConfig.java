@@ -70,7 +70,9 @@ public class SecurityConfig {
                                 "/api/liste/*",
                                 "/error",
                                 "/health",
-                                "/"
+                                "/",
+                                "/swagger-ui/index.html",
+                                "/v3/api-docs"
                         ).permitAll()
                         // Toutes les autres routes nécessitent d'être connecté
                         .anyRequest().authenticated()
