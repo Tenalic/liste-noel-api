@@ -45,6 +45,8 @@ public class AccountResource {
 
     private final JwtService jwtService;
 
+    private final static String AUT_TOKEN_KEY = "auth-token";
+
     public AccountResource(AccountService accountService, SecretService secretService, MessageService messageService, JwtService jwtService) {
         this.accountService = accountService;
         this.secretService = secretService;
@@ -69,7 +71,7 @@ public class AccountResource {
             String token = jwtService.generateToken(email);
 
             // HTTP-only cookie: JavaScript CANNOT read it → protected against XSS
-            ResponseCookie cookie = ResponseCookie.from("auth-token", token)
+            ResponseCookie cookie = ResponseCookie.from(AUT_TOKEN_KEY, token)
                     .httpOnly(true)                     // not accessible from JS
                     .secure(true)                       // HTTPS only (false in local dev)
                     .path("/")                          // valid on all routes
@@ -103,7 +105,7 @@ public class AccountResource {
                                                  Locale locale) {
         String email = loginRequest.email();
 
-        LOGGER.info("Entering login service: " + email);
+        LOGGER.info("Entering login service: {}", email);
 
         try {
             AccountDto account = accountService.login(email, loginRequest.password());
@@ -111,7 +113,7 @@ public class AccountResource {
             String token = jwtService.generateToken(account.getEmail());
 
             // HTTP-only cookie: JavaScript CANNOT read it → protected against XSS
-            ResponseCookie cookie = ResponseCookie.from("auth-token", token)
+            ResponseCookie cookie = ResponseCookie.from(AUT_TOKEN_KEY, token)
                     .httpOnly(true)                     // not accessible from JS
                     .secure(true)                       // HTTPS only (false in local dev)
                     .path("/")                          // valid on all routes
@@ -129,7 +131,7 @@ public class AccountResource {
                     .body(new AccountResponse(messageService.getMessage(ACCOUNT_NOT_FOUND, locale), Constants.API_RETURN_KO));
 
         } catch (Exception e) {
-            LOGGER.error("Error during login: " + email, e);
+            LOGGER.error("Error during login: {}", email, e);
             return ResponseEntity.internalServerError()
                     .body(new AccountResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constants.API_RETURN_KO));
         }
@@ -138,7 +140,7 @@ public class AccountResource {
     @PostMapping("/deconnexion")
     public ResponseEntity<Void> logout() {
         // Overwrite the cookie with maxAge=0 → the browser deletes it immediately
-        ResponseCookie cookie = ResponseCookie.from("auth-token", "")
+        ResponseCookie cookie = ResponseCookie.from(AUT_TOKEN_KEY, "")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")

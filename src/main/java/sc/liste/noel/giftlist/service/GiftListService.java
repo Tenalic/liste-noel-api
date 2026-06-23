@@ -39,7 +39,7 @@ public class GiftListService {
     private final MailService mailService;
 
     @Value("${send_email_active}")
-    private Boolean mailServiceEnabled;
+    private boolean mailServiceEnabled;
 
     private final EmailTemplateService emailTemplateService;
 
@@ -81,7 +81,7 @@ public class GiftListService {
     }
 
     // FIXME create a GiftListSimpleEntity repo without the gifts (perf)
-    public List<GiftListDto> getGiftLists(boolean isPublic, String name) throws GiftListNotFoundException {
+    public List<GiftListDto> getGiftLists(boolean isPublic, String name) {
         List<GiftListEntity> giftListEntities;
         boolean isSearchByName = name != null && !name.isBlank();
         if (isSearchByName) {
@@ -124,7 +124,7 @@ public class GiftListService {
         List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByEmail(email);
 
         if (favoriteEntityList == null) {
-            return null;
+            return List.of();
         }
         List<GiftListEntity> list = new ArrayList<>();
 

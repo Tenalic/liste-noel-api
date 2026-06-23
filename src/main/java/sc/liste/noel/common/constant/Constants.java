@@ -1,6 +1,6 @@
 package sc.liste.noel.common.constant;
 
-public class Constants {
+public abstract class Constants {
 
     public static final int API_RETURN_OK = 0;
 
