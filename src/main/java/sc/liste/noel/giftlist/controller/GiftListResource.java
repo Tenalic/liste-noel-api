@@ -1,5 +1,6 @@
 package sc.liste.noel.giftlist.controller;
 
+import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
@@ -97,7 +98,7 @@ public class GiftListResource {
 
     @PostMapping("/creer")
     public ResponseEntity<GenericResponse> createGiftList(Principal principal,
-                                                          @RequestBody CreateGiftListRequest giftListRequest) {
+                                                          @RequestBody @Valid CreateGiftListRequest giftListRequest) {
         String email = principal.getName();
         giftListService.createGiftList(email, giftListRequest.name(), giftListRequest.isPublic());
         return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
@@ -125,7 +126,7 @@ public class GiftListResource {
 
     @PostMapping("/{giftListId}/cadeau")
     public ResponseEntity<GenericResponse> addGift(Principal principal,
-                                                   @RequestBody GiftDto gift,
+                                                   @RequestBody @Valid GiftDto gift,
                                                    @PathVariable String giftListId,
                                                    Locale locale) {
         String email = principal.getName();
@@ -153,7 +154,7 @@ public class GiftListResource {
 
     @PutMapping("/{giftListId}/publique")
     public ResponseEntity<GenericResponse> updatePublic(@PathVariable String giftListId,
-                                                        @RequestBody PublicRequest publicRequest,
+                                                        @RequestBody @Valid PublicRequest publicRequest,
                                                         Locale locale,
                                                         Principal principal) {
         String email = principal.getName();

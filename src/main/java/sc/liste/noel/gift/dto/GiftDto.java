@@ -1,15 +1,19 @@
 package sc.liste.noel.gift.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
 
 public class GiftDto implements Serializable {
 
     @JsonProperty("idObjet")
+    @NotBlank(message = "idObjet vide")
     private Long giftId;
 
     @JsonProperty("titre")
+    @NotBlank(message = "titre vide")
     private String title;
 
     private String description;
@@ -27,7 +31,9 @@ public class GiftDto implements Serializable {
 
     @JsonProperty("priorite")
     private String priorityLabel;
+    
     @JsonProperty("valuePriorite")
+    @NotNull(message = "priorityValue null")
     private Integer priorityValue;
 
     public GiftDto() {

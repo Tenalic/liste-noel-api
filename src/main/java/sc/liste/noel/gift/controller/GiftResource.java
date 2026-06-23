@@ -1,5 +1,6 @@
 package sc.liste.noel.gift.controller;
 
+import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,7 @@ public class GiftResource {
 
     @PutMapping("/{giftId}")
     public ResponseEntity<GenericResponse> updateGift(Principal principal,
-                                                      @RequestBody GiftDto gift,
+                                                      @RequestBody @Valid GiftDto gift,
                                                       @PathVariable String giftId,
                                                       Locale locale) {
         String email = principal.getName();

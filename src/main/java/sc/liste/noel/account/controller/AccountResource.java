@@ -2,6 +2,7 @@ package sc.liste.noel.account.controller;
 
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -172,7 +173,7 @@ public class AccountResource {
     }
 
     @PostMapping("/update-password")
-    public ResponseEntity<AccountResponse> updatePassword(@RequestBody ChangePasswordRequest changePasswordRequest,
+    public ResponseEntity<AccountResponse> updatePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest,
                                                           Principal principal,
                                                           Locale locale) {
         String email = principal.getName();
@@ -227,7 +228,7 @@ public class AccountResource {
      */
     @DeleteMapping("/supprimer")
     public ResponseEntity<AccountResponse> deleteAccount(
-            @RequestParam @NotBlank String email,
+            @RequestParam @NotBlank(message = "{email.required}") @Email(message = "{email.invalid}") String email,
             @RequestHeader(value = "secret") String secret,
             Locale locale) {
 
@@ -252,8 +253,8 @@ public class AccountResource {
 
     @GetMapping("/activate")
     public ResponseEntity<String> activateAccount(
-            @RequestParam @NotBlank String email,
-            @RequestParam @NotBlank String key,
+            @RequestParam @NotBlank(message = "{email.required}") @Email(message = "{email.invalid}") String email,
+            @RequestParam @NotBlank(message = "key obligatoire") String key,
             Locale locale) throws AccountNotFoundException {
 
         boolean activated = accountService.activateUser(email, key);
