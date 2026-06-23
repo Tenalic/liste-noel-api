@@ -43,9 +43,7 @@ public class SecurityConfig {
                     config.setAllowCredentials(true);
                     return config;
                 }))
-                // Désactive CSRF : on est protégé par le cookie SameSite=Strict + JWT
                 .csrf(AbstractHttpConfigurer::disable)
-
                 // Pas de session côté serveur : le JWT suffit
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
