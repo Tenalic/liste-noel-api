@@ -12,7 +12,6 @@ import sc.liste.noel.common.service.EmailTemplateService;
 import sc.liste.noel.common.service.MailService;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 public class AccountService {
@@ -40,7 +39,7 @@ public class AccountService {
 
 
     public boolean accountExists(String email) {
-        return Optional.ofNullable(accountRepo.findByEmail(email)).isPresent();
+        return accountRepo.findByEmail(email).isPresent();
     }
 
 
@@ -51,7 +50,7 @@ public class AccountService {
 
 
     public boolean pseudoExists(String pseudo) {
-        return Optional.ofNullable(accountRepo.findByPseudo(pseudo)).isPresent();
+        return accountRepo.findByPseudo(pseudo).isPresent();
     }
 
 

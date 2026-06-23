@@ -9,9 +9,6 @@ public interface AccountRepo extends CrudRepository<AccountEntity, String> {
 
     Optional<AccountEntity> findByEmail(String email);
 
-    AccountEntity findByPseudo(String pseudo);
-
-    AccountEntity findByEmailAndPassword(String email, String password);
-
+    Optional<AccountEntity> findByPseudo(String pseudo);
 
 }

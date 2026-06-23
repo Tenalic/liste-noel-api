@@ -91,19 +91,15 @@ public class GiftListService {
         }
         List<GiftListDto> giftListDtos = GiftListMapper.entitiesToDtosWithoutGifts(giftListEntities);
 
-        if (giftListDtos != null) {
-            giftListDtos.forEach(giftListDto -> {
-                        giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, giftListDto.getGiftListId()));
-                        try {
-                            this.replaceEmailsWithPseudo(giftListDto);
-                        } catch (AccountNotFoundException e) {
-                            throw new RuntimeException(e);
-                        }
+        giftListDtos.forEach(giftListDto -> {
+                    giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, giftListDto.getGiftListId()));
+                    try {
+                        this.replaceEmailsWithPseudo(giftListDto);
+                    } catch (AccountNotFoundException e) {
+                        throw new RuntimeException(e);
                     }
-            );
-        } else {
-            throw new GiftListNotFoundException("No gift list found" + (isSearchByName ? " " + name : ""));
-        }
+                }
+        );
         return giftListDtos;
     }
 
