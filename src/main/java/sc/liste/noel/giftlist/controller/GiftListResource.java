@@ -5,20 +5,21 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import sc.liste.noel.common.constant.Constants;
+import sc.liste.noel.common.dto.response.GenericResponse;
+import sc.liste.noel.common.exception.ForbiddenModificationException;
+import sc.liste.noel.common.exception.GiftListNotFoundException;
+import sc.liste.noel.common.service.MessageService;
+import sc.liste.noel.gift.dto.GiftDto;
+import sc.liste.noel.gift.service.GiftService;
+import sc.liste.noel.giftlist.dto.GiftListContextDto;
+import sc.liste.noel.giftlist.dto.GiftListDto;
 import sc.liste.noel.giftlist.dto.request.CreateGiftListRequest;
 import sc.liste.noel.giftlist.dto.request.PublicRequest;
-import sc.liste.noel.common.dto.response.GenericResponse;
 import sc.liste.noel.giftlist.dto.response.GiftListResponse;
 import sc.liste.noel.giftlist.dto.response.GiftListsResponse;
 import sc.liste.noel.giftlist.dto.response.MyGiftListsResponse;
-import sc.liste.noel.common.exception.GiftListNotFoundException;
-import sc.liste.noel.common.exception.ForbiddenModificationException;
-import sc.liste.noel.giftlist.dto.GiftListDto;
-import sc.liste.noel.giftlist.dto.GiftListContextDto;
-import sc.liste.noel.gift.dto.GiftDto;
 import sc.liste.noel.giftlist.service.GiftListService;
-import sc.liste.noel.common.service.MessageService;
-import sc.liste.noel.common.constant.Constants;
 
 import java.security.Principal;
 import java.util.List;
@@ -36,10 +37,13 @@ public class GiftListResource {
 
     private final MessageService messageService;
 
+    private final GiftService giftService;
+
     public GiftListResource(GiftListService giftListService,
-                            MessageService messageService) {
+                            MessageService messageService, GiftService giftService) {
         this.giftListService = giftListService;
         this.messageService = messageService;
+        this.giftService = giftService;
     }
 
     @GetMapping("/mes-listes")
@@ -121,7 +125,7 @@ public class GiftListResource {
         String email = principal.getName();
         LOGGER.info("Adding gift {} by user {}", gift.getTitle(), email);
         try {
-            giftListService.addGiftToGiftList(gift.getTitle(), gift.getUrl(), gift.getDescription(), giftListId, email, gift.getPriorityValue());
+            giftService.addGiftToGiftList(gift.getTitle(), gift.getUrl(), gift.getDescription(), giftListId, email, gift.getPriorityValue());
             return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));

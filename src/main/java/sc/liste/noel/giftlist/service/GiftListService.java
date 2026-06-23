@@ -3,21 +3,19 @@ package sc.liste.noel.giftlist.service;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import sc.liste.noel.giftlist.mapper.GiftListMapper;
+import sc.liste.noel.account.db.repo.AccountRepo;
+import sc.liste.noel.common.exception.ForbiddenModificationException;
+import sc.liste.noel.common.exception.GiftListNotFoundException;
+import sc.liste.noel.common.service.EmailTemplateService;
+import sc.liste.noel.common.service.MailService;
 import sc.liste.noel.gift.mapper.GiftMapper;
 import sc.liste.noel.giftlist.db.entity.FavoriteEntity;
 import sc.liste.noel.giftlist.db.entity.GiftListEntity;
-import sc.liste.noel.gift.db.entity.GiftEntity;
-import sc.liste.noel.account.db.repo.AccountRepo;
 import sc.liste.noel.giftlist.db.repo.FavoriteRepo;
 import sc.liste.noel.giftlist.db.repo.GiftListRepo;
-import sc.liste.noel.gift.db.repo.GiftRepo;
-import sc.liste.noel.common.exception.GiftListNotFoundException;
-import sc.liste.noel.common.exception.ForbiddenModificationException;
-import sc.liste.noel.common.service.EmailTemplateService;
 import sc.liste.noel.giftlist.dto.GiftListContextDto;
 import sc.liste.noel.giftlist.dto.GiftListDto;
-import sc.liste.noel.common.service.MailService;
+import sc.liste.noel.giftlist.mapper.GiftListMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +26,6 @@ import java.util.Optional;
 public class GiftListService {
 
     private final GiftListRepo giftListRepo;
-
-    private final GiftRepo giftRepo;
 
     private final FavoriteRepo favoriteRepo;
 
@@ -45,16 +41,15 @@ public class GiftListService {
 
     private final EmailTemplateService emailTemplateService;
 
-    public GiftListService(GiftListRepo giftListRepo, GiftRepo giftRepo, FavoriteRepo favoriteRepo, AccountRepo accountRepo, MailService mailService, EmailTemplateService emailTemplateService) {
+    public GiftListService(GiftListRepo giftListRepo, FavoriteRepo favoriteRepo, AccountRepo accountRepo, MailService mailService, EmailTemplateService emailTemplateService) {
         this.giftListRepo = giftListRepo;
-        this.giftRepo = giftRepo;
         this.favoriteRepo = favoriteRepo;
         this.accountRepo = accountRepo;
         this.mailService = mailService;
         this.emailTemplateService = emailTemplateService;
     }
 
-    
+
     public void createGiftList(String owner, String name, boolean isPublic) {
 
         GiftListEntity giftListEntity = new GiftListEntity();
@@ -65,13 +60,13 @@ public class GiftListService {
         giftListRepo.save(giftListEntity);
     }
 
-    
+
     public List<GiftListDto> getGiftListsOfEmail(String email) {
         List<GiftListEntity> giftListEntityList = giftListRepo.findByOwner(email);
         return GiftListMapper.entitiesToDtosWithoutGifts(giftListEntityList);
     }
 
-    
+
     public GiftListDto getGiftListById(Long id) throws GiftListNotFoundException {
         GiftListEntity giftListEntity = giftListRepo.findByGiftListId(id);
         GiftListDto giftListDto = GiftListMapper.entityToDto(giftListEntity);
@@ -84,7 +79,6 @@ public class GiftListService {
     }
 
     // FIXME create a GiftListSimpleEntity repo without the gifts (perf)
-    
     public List<GiftListDto> getGiftLists(boolean isPublic, String name) throws GiftListNotFoundException {
         List<GiftListEntity> giftListEntities;
         boolean isSearchByName = name != null && !name.isBlank();
@@ -108,7 +102,7 @@ public class GiftListService {
     }
 
     @Transactional
-    
+
     public void updatePublic(Long giftListId, boolean isPublic, String email) throws ForbiddenModificationException, GiftListNotFoundException {
         GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
         if (giftListEntity == null) {
@@ -121,18 +115,6 @@ public class GiftListService {
             throw new ForbiddenModificationException("The gift list does not belong to the user");
         }
 
-    }
-
-    
-    public void addGiftToGiftList(String title, String url, String description, String giftListId, String owner, int priority) {
-        GiftEntity giftEntity = new GiftEntity();
-        giftEntity.setDescription(description);
-        giftEntity.setGiftListId(Long.valueOf(giftListId));
-        giftEntity.setTitle(title);
-        giftEntity.setTaken(false);
-        giftEntity.setUrl(url);
-        giftEntity.setPriorityValue(priority);
-        giftRepo.save(giftEntity);
     }
 
 
@@ -166,7 +148,6 @@ public class GiftListService {
     }
 
     @Transactional
-    
     public void addFavorite(Long giftListId, String email) {
         FavoriteEntity existingFavorite = favoriteRepo.findByEmailAndGiftListId(email, giftListId);
         if (existingFavorite == null) {
@@ -178,7 +159,7 @@ public class GiftListService {
     }
 
     @Transactional
-    
+
     public void toggleFavorite(Long giftListId, String email) {
         FavoriteEntity existingFavorite = favoriteRepo.findByEmailAndGiftListId(email, giftListId);
         if (existingFavorite != null) {
@@ -188,80 +169,58 @@ public class GiftListService {
         }
     }
 
-    @Transactional
-    
-    public void deleteGift(Long giftId, String email) throws ForbiddenModificationException {
+    public void notifyGiftDeletionToFavorites(Long giftListId, String giftTitle, String giftDescription, String giftUrl) {
 
-        GiftEntity giftEntity = giftRepo.findByGiftId(giftId);
+        GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
 
-        if (giftEntity != null) {
+        if (mailServiceEnabled) {
+            String emailBody = emailTemplateService.generateGiftDeletionBody(giftTitle,
+                    giftDescription,
+                    giftUrl,
+                    giftListEntity.getName(),
+                    GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getGiftListId()));
+            String emailSubject = "Objet supprimé de la liste : " + giftListEntity.getName();
 
-            GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftEntity.getGiftListId());
+            List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByGiftListId(giftListEntity.getGiftListId());
 
-            if (!giftListEntity.getOwner().equals(email)) {
-                throw new ForbiddenModificationException("You cannot delete a gift that does not belong to one of your lists");
-            }
-
-
-            if (mailServiceEnabled) {
-                String emailBody = emailTemplateService.generateGiftDeletionBody(giftEntity.getTitle(),
-                        giftEntity.getDescription(),
-                        giftEntity.getUrl(),
-                        giftListEntity.getName(),
-                        GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getGiftListId()));
-                String emailSubject = "Objet supprimé de la liste : " + giftListEntity.getName();
-
-                List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByGiftListId(giftListEntity.getGiftListId());
-
-                sendEmailToRecipients(getEmailsFromFavorites(favoriteEntityList), emailBody, emailSubject);
-            }
-
-            giftRepo.delete(giftEntity);
+            mailService.sendEmailToRecipients(getEmailsFromFavorites(favoriteEntityList), emailBody, emailSubject);
         }
-
     }
 
-    @Transactional
-    
-    public void updateGift(Long giftId, String titleUpdate, String descriptionUpdate, String urlUpdate, int priorityUpdate, String email) throws ForbiddenModificationException {
+    public void notifyGiftModificationToFavorites(Long giftListId,
+                                                  String currentGiftTitle,
+                                                  String currentGiftDescription,
+                                                  String currentGiftUrl,
+                                                  Integer currentPriority,
+                                                  String titleUpdate,
+                                                  String descriptionUpdate,
+                                                  String urlUpdate,
+                                                  Integer priorityUpdate) {
+        if (mailServiceEnabled) {
+            GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
 
-        GiftEntity giftEntity = giftRepo.findByGiftId(giftId);
-
-        if (giftEntity != null) {
-
-            GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftEntity.getGiftListId());
-
-            if (!giftListEntity.getOwner().equals(email)) {
-                throw new ForbiddenModificationException("You cannot modify a gift that does not belong to one of your lists");
-            }
-
-            String emailBody = emailTemplateService.generateGiftModificationBody(giftEntity.getTitle(),
-                    giftEntity.getDescription(),
-                    giftEntity.getUrl(),
+            String emailBody = emailTemplateService.generateGiftModificationBody(currentGiftTitle,
+                    currentGiftDescription,
+                    currentGiftUrl,
                     titleUpdate,
+                    GiftMapper.mapPriorityLabel(currentPriority),
                     descriptionUpdate,
                     urlUpdate,
                     GiftMapper.mapPriorityLabel(priorityUpdate),
                     giftListEntity.getName(),
                     GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getGiftListId())
             );
-            String emailSubject = "Objet modifié dans la liste : " + giftListEntity.getName();
+            String emailSubject = "Objet modifié de la liste : " + giftListEntity.getName();
 
             List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByGiftListId(giftListEntity.getGiftListId());
 
-            sendEmailToRecipients(getEmailsFromFavorites(favoriteEntityList), emailBody, emailSubject);
-
-            giftEntity.setTitle(titleUpdate);
-            giftEntity.setDescription(descriptionUpdate);
-            giftEntity.setUrl(urlUpdate);
-            giftEntity.setPriorityValue(priorityUpdate);
-
-            giftRepo.save(giftEntity);
+            mailService.sendEmailToRecipients(getEmailsFromFavorites(favoriteEntityList), emailBody, emailSubject);
         }
     }
 
+
     @Transactional
-    
+
     public String deleteGiftList(Long giftListId, String email) throws ForbiddenModificationException, GiftListNotFoundException {
         GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
         if (giftListEntity != null) {
@@ -278,7 +237,7 @@ public class GiftListService {
         }
     }
 
-    
+
     public GiftListContextDto getGiftListWithContext(Long id, String email) throws GiftListNotFoundException {
         GiftListDto giftList = this.getGiftListById(id);
 
@@ -316,12 +275,6 @@ public class GiftListService {
                 .stream()
                 .map(FavoriteEntity::getEmail)
                 .toList();
-    }
-
-    private void sendEmailToRecipients(List<String> recipientEmails, String body, String subject) {
-        for (String email : recipientEmails) {
-            mailService.sendEmail(email, subject, body);
-        }
     }
 
 }

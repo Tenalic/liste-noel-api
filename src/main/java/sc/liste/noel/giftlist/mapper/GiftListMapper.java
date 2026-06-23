@@ -1,8 +1,8 @@
 package sc.liste.noel.giftlist.mapper;
 
+import sc.liste.noel.gift.mapper.GiftMapper;
 import sc.liste.noel.giftlist.db.entity.GiftListEntity;
 import sc.liste.noel.giftlist.dto.GiftListDto;
-import sc.liste.noel.gift.mapper.GiftMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ public class GiftListMapper {
 
     public static List<GiftListDto> entitiesToDtosWithoutGifts(List<GiftListEntity> giftListEntityList) {
         if (giftListEntityList == null) {
-            return null;
+            return List.of();
         }
         List<GiftListDto> list = new ArrayList<>();
         for (GiftListEntity giftListEntity : giftListEntityList) {

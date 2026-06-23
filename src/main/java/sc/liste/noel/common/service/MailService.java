@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Properties;
 
 @Service
@@ -26,6 +27,12 @@ public class MailService {
     private Boolean isEnabled;
 
     private Session session;
+
+    public void sendEmailToRecipients(List<String> recipientEmails, String body, String subject) {
+        for (String email : recipientEmails) {
+            sendEmail(email, subject, body);
+        }
+    }
 
     public void sendEmail(String recipient, String subject, String content) {
 

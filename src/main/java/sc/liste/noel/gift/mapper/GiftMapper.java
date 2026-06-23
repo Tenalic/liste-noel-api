@@ -11,7 +11,7 @@ public class GiftMapper {
 
     public static List<GiftDto> entitiesToDtos(List<GiftEntity> giftEntityList) {
         if (giftEntityList == null) {
-            return null;
+            return List.of();
         }
         List<GiftDto> giftDtoList = new ArrayList<>();
         for (GiftEntity giftEntity : giftEntityList) {

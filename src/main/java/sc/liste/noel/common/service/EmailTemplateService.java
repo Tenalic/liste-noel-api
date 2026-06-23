@@ -45,6 +45,7 @@ public class EmailTemplateService {
     public String generateGiftModificationBody(String oldTitle,
                                                String oldDescription,
                                                String oldUrl,
+                                               String oldPriorityLabel,
                                                String newTitle,
                                                String newDescription,
                                                String newUrl,
@@ -55,6 +56,7 @@ public class EmailTemplateService {
         context.setVariable("oldTitle", oldTitle);
         context.setVariable("oldDescription", oldDescription);
         context.setVariable("oldUrl", oldUrl);
+        context.setVariable("oldPriorityLabel", oldPriorityLabel);
 
         context.setVariable("newTitle", newTitle);
         context.setVariable("newDescription", newDescription);
