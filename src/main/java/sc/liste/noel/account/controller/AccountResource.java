@@ -93,7 +93,7 @@ public class AccountResource {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new AccountResponse(messageService.getMessage(PASSWORD, locale), Constants.API_RETURN_KO));
         } catch (Exception e) {
             LOGGER.error("Error while creating the account for the email: {}", registrationRequest.email(), e);
-            return ResponseEntity.internalServerError().body(new AccountResponse(registrationRequest.email(), messageService.getMessage(ACCOUNT_ERROR_KEY, locale), Constants.API_RETURN_KO));
+            throw e;
         }
     }
 
@@ -246,8 +246,7 @@ public class AccountResource {
 
         } catch (Exception e) {
             LOGGER.error("Error while deleting the account for the email: {}", email, e);
-            return ResponseEntity.internalServerError()
-                    .body(new AccountResponse(email, messageService.getMessage(API_ERROR_GENERIC_KEY, locale), Constants.API_RETURN_KO));
+            throw e;
         }
     }
 

@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import sc.liste.noel.account.exception.AccountNotFoundException;
 import sc.liste.noel.common.constant.Constants;
 import sc.liste.noel.common.dto.response.GenericResponse;
 import sc.liste.noel.common.exception.ForbiddenModificationException;
@@ -47,15 +48,20 @@ public class GiftListResource {
     }
 
     @GetMapping("/mes-listes")
-    public ResponseEntity<MyGiftListsResponse> getMyGiftLists(Principal principal) {
-        String email = principal.getName();
+    public ResponseEntity<MyGiftListsResponse> getMyGiftLists(Principal principal, Locale locale) {
+        String email = null;
         try {
+            email = principal.getName();
             List<GiftListDto> giftLists = giftListService.getGiftListsOfEmail(email);
             List<GiftListDto> favorites = giftListService.getFavoriteGiftListsOfEmail(email);
             return ResponseEntity.ok(new MyGiftListsResponse(giftLists, favorites));
+        } catch (AccountNotFoundException e) {
+            LOGGER.warn("[mot-de-passe-oublie] account not found {}", email);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new MyGiftListsResponse(messageService.getMessage(ACCOUNT_NOT_FOUND, locale), Constants.API_RETURN_KO));
         } catch (Exception e) {
-            LOGGER.error("Error while retrieving the gift lists for " + email, e);
-            return ResponseEntity.internalServerError().build();
+            LOGGER.error("Error while retrieving the gift lists for {}", email, e);
+            throw e;
         }
     }
 

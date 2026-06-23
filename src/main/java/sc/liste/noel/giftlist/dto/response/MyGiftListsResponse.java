@@ -1,8 +1,8 @@
 package sc.liste.noel.giftlist.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import sc.liste.noel.giftlist.dto.GiftListDto;
 import sc.liste.noel.common.dto.response.GenericResponse;
+import sc.liste.noel.giftlist.dto.GiftListDto;
 
 import java.util.List;
 
@@ -13,6 +13,10 @@ public class MyGiftListsResponse extends GenericResponse {
     private List<GiftListDto> favorites;
 
     public MyGiftListsResponse() {
+    }
+
+    public MyGiftListsResponse(String returnMessage, int returnCode) {
+        super(returnMessage, returnCode);
     }
 
     public MyGiftListsResponse(List<GiftListDto> giftLists, List<GiftListDto> favorites) {
