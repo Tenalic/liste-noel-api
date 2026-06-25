@@ -22,6 +22,7 @@ import sc.liste.noel.gift.service.GiftService;
 import sc.liste.noel.giftlist.dto.GiftListContextDto;
 import sc.liste.noel.giftlist.dto.GiftListDto;
 import sc.liste.noel.giftlist.dto.request.CreateGiftListRequest;
+import sc.liste.noel.giftlist.dto.request.NameRequest;
 import sc.liste.noel.giftlist.dto.request.PublicRequest;
 import sc.liste.noel.giftlist.dto.response.GiftListResponse;
 import sc.liste.noel.giftlist.dto.response.GiftListsResponse;
@@ -283,7 +284,6 @@ public class GiftListResource {
      *
      * @param search terme de recherche sur le nom de la liste ; chaîne vide par défaut
      *               pour retourner toutes les listes publiques
-     * @param locale locale courante pour l'internationalisation des messages d'erreur
      * @return {@code 200 OK} avec la liste des listes publiques correspondantes
      */
     @Operation(summary = "Récupérer les listes publiques",
@@ -292,8 +292,7 @@ public class GiftListResource {
     @GetMapping("/publiques")
     public ResponseEntity<GiftListsResponse> getPublicGiftLists(
             @Parameter(description = "Terme de recherche sur le nom de la liste (optionnel)")
-            @RequestParam(name = "recherche", defaultValue = "") String search,
-            Locale locale) {
+            @RequestParam(name = "recherche", defaultValue = "") String search) {
         List<GiftListDto> giftLists = giftListService.getGiftLists(true, search);
         GiftListsResponse response = new GiftListsResponse("Succes", Constants.API_RETURN_OK, giftLists);
         return ResponseEntity.ok(response);
@@ -328,6 +327,25 @@ public class GiftListResource {
         String email = principal.getName();
         try {
             giftListService.updatePublic(Long.valueOf(giftListId), publicRequest.isPublic(), email);
+            return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
+        } catch (GiftListNotFoundException e) {
+            LOGGER.warn(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new GenericResponse(messageService.getMessage(GIFTLIST_NOT_FOUND, locale), Constants.API_RETURN_KO));
+        } catch (ForbiddenModificationException e) {
+            LOGGER.warn(e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new GenericResponse(messageService.getMessage(MODIFICATION_FORBIDDEN, locale), Constants.API_RETURN_KO));
+        }
+    }
+
+    @PutMapping("/{giftListId}/nom")
+    public ResponseEntity<GenericResponse> updateName(
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId,
+            @RequestBody @Valid NameRequest nameRequest,
+            Locale locale,
+            Principal principal) {
+        String email = principal.getName();
+        try {
+            giftListService.updateName(Long.valueOf(giftListId), nameRequest.listName(), email);
             return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
         } catch (GiftListNotFoundException e) {
             LOGGER.warn(e.getMessage());

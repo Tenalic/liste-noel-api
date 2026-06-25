@@ -104,7 +104,6 @@ public class GiftListService {
     }
 
     @Transactional
-
     public void updatePublic(Long giftListId, boolean isPublic, String email) throws ForbiddenModificationException, GiftListNotFoundException {
         GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
         if (giftListEntity == null) {
@@ -116,7 +115,20 @@ public class GiftListService {
         } else {
             throw new ForbiddenModificationException("The gift list does not belong to the user");
         }
+    }
 
+    @Transactional
+    public void updateName(Long giftListId, String name, String email) throws ForbiddenModificationException, GiftListNotFoundException {
+        GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
+        if (giftListEntity == null) {
+            throw new GiftListNotFoundException("Gift list not found");
+        }
+        if (giftListEntity.getOwner().equals(email)) {
+            giftListEntity.setName(name);
+            giftListRepo.save(giftListEntity);
+        } else {
+            throw new ForbiddenModificationException("The gift list does not belong to the user");
+        }
     }
 
 
