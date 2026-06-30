@@ -120,7 +120,7 @@ public class AccountResource {
                     .secure(true)                       // HTTPS only (false in local dev)
                     .path("/")                          // valid on all routes
                     .maxAge(Duration.ofSeconds(86400))  // 24h, same as jwt.expiration
-                    .sameSite("None")                 // CSRF protection
+                    .sameSite("Lax")                 // CSRF protection
                     .build();
 
             return ResponseEntity.ok()
@@ -179,7 +179,7 @@ public class AccountResource {
                     .secure(true)                       // HTTPS only (false in local dev)
                     .path("/")                          // valid on all routes
                     .maxAge(Duration.ofSeconds(86400))  // 24h, same as jwt.expiration
-                    .sameSite("None")                 // CSRF protection
+                    .sameSite("Lax")                 // CSRF protection
                     .build();
 
             return ResponseEntity.ok()

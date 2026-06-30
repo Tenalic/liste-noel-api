@@ -1,6 +1,5 @@
 package sc.liste.noel.common.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,19 +11,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
 import sc.liste.noel.common.service.JwtAuthFilter;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-
-    @Value("${url.front}")
-    private String urlFront;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
@@ -33,16 +26,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(request -> {
-                    CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOrigins(List.of(
-                            urlFront
-                    ));
-                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    config.setAllowedHeaders(List.of("*"));
-                    config.setAllowCredentials(true);
-                    return config;
-                }))
+                // Front et back sont servis depuis la MÊME origine (le SPA est embarqué
+                // dans le back) : le navigateur n'émet plus de requête cross-origin,
+                // la configuration CORS est donc devenue inutile et a été retirée.
                 .csrf(AbstractHttpConfigurer::disable)
                 // Pas de session côté serveur : le JWT suffit
                 .sessionManagement(session ->
@@ -59,22 +45,37 @@ public class SecurityConfig {
                             response.getWriter().write("{\"messageRetour\":\"Accès refusé\",\"codeRetour\":1}");
                         })
                 )
-                // Définition des routes publiques et protégées
+                // Définition des routes publiques et protégées.
+                // IMPORTANT : l'ordre compte (premier matcher qui correspond = gagnant).
+                // On place donc les règles /api/** AVANT la couche statique/SPA pour
+                // ne PAS affaiblir la protection des endpoints déjà sécurisés.
                 .authorizeHttpRequests(auth -> auth
+                        // --- 1) API ---
+                        // Consultation publique d'une liste précise (lecture seule)
                         .requestMatchers(HttpMethod.GET, "/api/liste/*").permitAll()
                         // Tout le reste de /api/liste/** nécessite d'être connecté
                         .requestMatchers("/api/liste/**").authenticated()
-                        // Routes publiques (pas besoin d'être connecté)
+                        // Endpoints compte + technique publics (comportement inchangé)
                         .requestMatchers(
                                 "/api/compte/**",
-                                "/api/liste/*",
                                 "/error",
                                 "/health",
-                                "/",
-                                "/swagger-ui/index.html",
-                                "/v3/api-docs"
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
-                        // Toutes les autres routes nécessitent d'être connecté
+
+                        // --- 2) SPA React (servi par le back, même origine) ---
+                        // Tout GET restant correspond au SPA : la coquille index.html,
+                        // les ressources statiques (/assets/**, JS, CSS, favicon...) ET
+                        // les routes React Router (/ma-liste, /profil...) qui seront
+                        // forwardées vers index.html par SpaController.
+                        // Ces ressources DOIVENT être publiques : la sécurité porte sur
+                        // les données (/api/**, déjà filtrées ci-dessus), pas sur l'app.
+                        // Les routes /api/liste/** protégées sont déjà capturées plus haut,
+                        // donc ce permitAll GET ne les affaiblit pas.
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()
+
+                        // --- 3) Tout le reste (POST/PUT/DELETE hors API publique) ---
                         .anyRequest().authenticated()
                 )
 
