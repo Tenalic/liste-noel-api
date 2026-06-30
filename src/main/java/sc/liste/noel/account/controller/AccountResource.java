@@ -4,7 +4,6 @@ package sc.liste.noel.account.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -17,10 +16,12 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sc.liste.noel.account.dto.AccountDto;
+import sc.liste.noel.account.dto.AccountInformationDto;
 import sc.liste.noel.account.dto.request.ChangePasswordRequest;
 import sc.liste.noel.account.dto.request.ForgotPasswordRequest;
 import sc.liste.noel.account.dto.request.LoginRequest;
 import sc.liste.noel.account.dto.request.RegistrationRequest;
+import sc.liste.noel.account.dto.response.AccountInformationsResponse;
 import sc.liste.noel.account.dto.response.AccountResponse;
 import sc.liste.noel.account.exception.*;
 import sc.liste.noel.account.service.AccountService;
@@ -61,8 +62,10 @@ public class AccountResource {
 
     private final JwtService jwtService;
 
-    /** Nom du cookie d'authentification posé et lu par le navigateur. */
-    private final static String AUT_TOKEN_KEY = "auth-token";
+    /**
+     * Nom du cookie d'authentification posé et lu par le navigateur.
+     */
+    private static final String AUT_TOKEN_KEY = "auth-token";
 
     /**
      * Construit le contrôleur avec ses dépendances.
@@ -91,17 +94,15 @@ public class AccountResource {
      * @param locale              locale issue de l'en-tête {@code Accept-Language},
      *                            utilisée pour l'internationalisation des messages de retour
      * @return {@code 200 OK} avec le cookie et les informations du compte créé ;
-     *         {@code 409 Conflict} si l'email ou le pseudo est déjà utilisé ;
-     *         {@code 403 Forbidden} si les CGU ne sont pas acceptées ou si les mots de passe
-     *         ne correspondent pas
+     * {@code 409 Conflict} si l'email ou le pseudo est déjà utilisé ;
+     * {@code 403 Forbidden} si les CGU ne sont pas acceptées ou si les mots de passe
+     * ne correspondent pas
      */
     @Operation(summary = "Inscrire un nouvel utilisateur",
             description = "Crée un compte, pose un cookie JWT HTTP-only et envoie un email d'activation.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Compte créé, cookie posé"),
-            @ApiResponse(responseCode = "403", description = "CGU non acceptées ou mots de passe différents"),
-            @ApiResponse(responseCode = "409", description = "Email ou pseudo déjà utilisé")
-    })
+    @ApiResponse(responseCode = "200", description = "Compte créé, cookie posé")
+    @ApiResponse(responseCode = "403", description = "CGU non acceptées ou mots de passe différents")
+    @ApiResponse(responseCode = "409", description = "Email ou pseudo déjà utilisé")
     @PostMapping("/inscription")
     public ResponseEntity<AccountResponse> register(
             @RequestBody @Valid RegistrationRequest registrationRequest,
@@ -152,16 +153,14 @@ public class AccountResource {
      * @param loginRequest corps de la requête contenant l'email et le mot de passe
      * @param locale       locale courante pour l'internationalisation des messages
      * @return {@code 200 OK} avec le cookie et les informations du compte ;
-     *         {@code 404 Not Found} si les identifiants sont incorrects ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 404 Not Found} si les identifiants sont incorrects ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Connecter un utilisateur",
             description = "Vérifie les identifiants et pose un cookie JWT HTTP-only valide 24 heures.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Connexion réussie, cookie posé"),
-            @ApiResponse(responseCode = "404", description = "Identifiants incorrects"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
+    @ApiResponse(responseCode = "200", description = "Connexion réussie, cookie posé")
+    @ApiResponse(responseCode = "404", description = "Identifiants incorrects")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
     @PostMapping("/connexion")
     public ResponseEntity<AccountResponse> login(@RequestBody @Valid LoginRequest loginRequest,
                                                  Locale locale) {
@@ -237,18 +236,16 @@ public class AccountResource {
      * @param forgotPasswordRequest corps de la requête contenant l'adresse email du compte
      * @param locale                locale courante pour l'internationalisation des messages
      * @return {@code 200 OK} avec un message de confirmation d'envoi ;
-     *         {@code 403 Forbidden} si le service mail est désactivé ;
-     *         {@code 404 Not Found} si aucun compte ne correspond à l'email ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 403 Forbidden} si le service mail est désactivé ;
+     * {@code 404 Not Found} si aucun compte ne correspond à l'email ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Mot de passe oublié",
             description = "Génère un nouveau mot de passe et l'envoie par email. Nécessite que le service mail soit actif.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Nouveau mot de passe envoyé par email"),
-            @ApiResponse(responseCode = "403", description = "Service mail désactivé"),
-            @ApiResponse(responseCode = "404", description = "Compte introuvable"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
+    @ApiResponse(responseCode = "200", description = "Nouveau mot de passe envoyé par email")
+    @ApiResponse(responseCode = "403", description = "Service mail désactivé")
+    @ApiResponse(responseCode = "404", description = "Compte introuvable")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
     @PostMapping("/mot-de-passe-oublie")
     public ResponseEntity<GenericResponse> forgotPassword(@RequestBody @Valid ForgotPasswordRequest forgotPasswordRequest, Locale locale) {
         try {
@@ -282,19 +279,17 @@ public class AccountResource {
      * @param principal             principal Spring Security représentant l'utilisateur connecté
      * @param locale                locale courante pour l'internationalisation des messages
      * @return {@code 200 OK} si le mot de passe a été mis à jour ;
-     *         {@code 401 Unauthorized} si l'ancien mot de passe est incorrect ;
-     *         {@code 400 Bad Request} si le nouveau mot de passe et sa confirmation
-     *         ne correspondent pas ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 401 Unauthorized} si l'ancien mot de passe est incorrect ;
+     * {@code 400 Bad Request} si le nouveau mot de passe et sa confirmation
+     * ne correspondent pas ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Modifier le mot de passe",
             description = "Met à jour le mot de passe de l'utilisateur connecté après vérification de l'ancien.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Mot de passe mis à jour"),
-            @ApiResponse(responseCode = "400", description = "Nouveau mot de passe et confirmation différents"),
-            @ApiResponse(responseCode = "401", description = "Ancien mot de passe incorrect"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
+    @ApiResponse(responseCode = "200", description = "Mot de passe mis à jour")
+    @ApiResponse(responseCode = "400", description = "Nouveau mot de passe et confirmation différents")
+    @ApiResponse(responseCode = "401", description = "Ancien mot de passe incorrect")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
     @PostMapping("/update-password")
     public ResponseEntity<AccountResponse> updatePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest,
                                                           Principal principal,
@@ -330,18 +325,16 @@ public class AccountResource {
      *                  ou {@code null} si la requête n'est pas authentifiée
      * @param locale    locale courante pour l'internationalisation des messages
      * @return {@code 200 OK} avec l'email et le pseudo de l'utilisateur ;
-     *         {@code 401 Unauthorized} si le principal est absent ;
-     *         {@code 404 Not Found} si le compte associé au principal est introuvable ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 401 Unauthorized} si le principal est absent ;
+     * {@code 404 Not Found} si le compte associé au principal est introuvable ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Récupérer le profil de session",
             description = "Retourne l'email et le pseudo de l'utilisateur connecté. Renvoie 401 si non authentifié.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Session active, profil retourné"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié"),
-            @ApiResponse(responseCode = "404", description = "Compte introuvable"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
+    @ApiResponse(responseCode = "200", description = "Session active, profil retourné")
+    @ApiResponse(responseCode = "401", description = "Non authentifié")
+    @ApiResponse(responseCode = "404", description = "Compte introuvable")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
     @GetMapping("/me")
     public ResponseEntity<AccountResponse> getMe(Principal principal, Locale locale) {
         if (principal == null) {
@@ -375,16 +368,14 @@ public class AccountResource {
      * @param secret valeur secrète d'administration transmise dans l'en-tête {@code secret}
      * @param locale locale courante pour l'internationalisation des messages
      * @return {@code 200 OK} si le compte a été supprimé ;
-     *         {@code 401 Unauthorized} si le secret est invalide ;
-     *         {@code 404 Not Found} si aucun compte ne correspond à l'email
+     * {@code 401 Unauthorized} si le secret est invalide ;
+     * {@code 404 Not Found} si aucun compte ne correspond à l'email
      */
     @Operation(summary = "Supprimer un compte utilisateur",
             description = "Suppression définitive protégée par un secret d'administration transmis dans l'en-tête 'secret'.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Compte supprimé"),
-            @ApiResponse(responseCode = "401", description = "Secret invalide"),
-            @ApiResponse(responseCode = "404", description = "Compte introuvable")
-    })
+    @ApiResponse(responseCode = "200", description = "Compte supprimé")
+    @ApiResponse(responseCode = "401", description = "Secret invalide")
+    @ApiResponse(responseCode = "404", description = "Compte introuvable")
     @DeleteMapping("/supprimer")
     public ResponseEntity<AccountResponse> deleteAccount(
             @Parameter(description = "Email du compte à supprimer", required = true)
@@ -422,15 +413,13 @@ public class AccountResource {
      * @param key    clé d'activation générée à l'inscription et transmise en paramètre de requête
      * @param locale locale courante pour l'internationalisation des messages
      * @return {@code 200 OK} avec un message de confirmation si l'activation réussit ;
-     *         {@code 400 Bad Request} si la clé est incorrecte ou le compte déjà activé
+     * {@code 400 Bad Request} si la clé est incorrecte ou le compte déjà activé
      * @throws AccountNotFoundException si aucun compte ne correspond à l'email fourni
      */
     @Operation(summary = "Activer un compte",
             description = "Active le compte via le lien reçu par email. La clé d'activation est à usage unique.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Compte activé avec succès"),
-            @ApiResponse(responseCode = "400", description = "Clé invalide ou compte déjà activé")
-    })
+    @ApiResponse(responseCode = "200", description = "Compte activé avec succès")
+    @ApiResponse(responseCode = "400", description = "Clé invalide ou compte déjà activé")
     @GetMapping("/activate")
     public ResponseEntity<String> activateAccount(
             @Parameter(description = "Email du compte à activer", required = true)
@@ -444,6 +433,29 @@ public class AccountResource {
             return ResponseEntity.ok(messageService.getMessage(API_ACCOUNT_ACTIVATION_SUCCESS_KEY, locale));
         } else {
             return ResponseEntity.badRequest().body(messageService.getMessage(API_ACCOUNT_ACTIVATION_FAILURE_KEY, locale));
+        }
+    }
+
+    @GetMapping("/infos")
+    public ResponseEntity<AccountInformationsResponse> getAccountInformations(Principal principal, Locale locale) {
+        String email = principal.getName();
+        try {
+            AccountInformationDto accountInformationDto = accountService.getAccountInformationDto(email);
+            return ResponseEntity.ok(new AccountInformationsResponse(accountInformationDto.getEmail(),
+                    accountInformationDto.getPseudo(),
+                    "Success",
+                    API_RETURN_OK,
+                    accountInformationDto.getLastLoginDate(),
+                    accountInformationDto.getLastPasswordChangeDate()));
+        } catch (AccountNotFoundException exception) {
+            LOGGER.warn("The account {} was not found", email);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AccountInformationsResponse(email,
+                            messageService.getMessage(ACCOUNT_NOT_FOUND, locale),
+                            Constants.API_RETURN_KO));
+        } catch (Exception e) {
+            LOGGER.error("Error when find account informations : {}", email, e);
+            throw e;
         }
     }
 

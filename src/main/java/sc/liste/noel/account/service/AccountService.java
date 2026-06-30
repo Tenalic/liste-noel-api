@@ -6,7 +6,9 @@ import org.springframework.stereotype.Service;
 import sc.liste.noel.account.db.entity.AccountEntity;
 import sc.liste.noel.account.db.repo.AccountRepo;
 import sc.liste.noel.account.dto.AccountDto;
+import sc.liste.noel.account.dto.AccountInformationDto;
 import sc.liste.noel.account.exception.*;
+import sc.liste.noel.account.mapper.AccountInformationsMapper;
 import sc.liste.noel.account.mapper.AccountMapper;
 import sc.liste.noel.common.service.EmailTemplateService;
 import sc.liste.noel.common.service.MailService;
@@ -16,6 +18,7 @@ import java.time.LocalDateTime;
 @Service
 public class AccountService {
 
+    public static final String ACCOUNT_NOT_FOUND = "Account not found";
     @Value("${base_url}")
     private String baseUrl;
 
@@ -26,7 +29,7 @@ public class AccountService {
     private final PasswordService passwordService;
 
     @Value("${send_email_active}")
-    private Boolean mailServiceEnabled;
+    private boolean mailServiceEnabled;
 
     private final EmailTemplateService emailTemplateService;
 
@@ -44,7 +47,7 @@ public class AccountService {
 
 
     public String getPseudo(String email) throws AccountNotFoundException {
-        AccountEntity account = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException("Account not found"));
+        AccountEntity account = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException(ACCOUNT_NOT_FOUND));
         return account.getPseudo();
     }
 
@@ -56,10 +59,10 @@ public class AccountService {
 
     public AccountDto login(String email, String password) throws AccountNotFoundException {
         AccountEntity account = accountRepo.findByEmail(email)
-                .orElseThrow(() -> new AccountNotFoundException("Account not found"));
+                .orElseThrow(() -> new AccountNotFoundException(ACCOUNT_NOT_FOUND));
 
         if (!passwordService.verifyPassword(password, account.getPassword())) {
-            throw new AccountNotFoundException("Account not found");
+            throw new AccountNotFoundException(ACCOUNT_NOT_FOUND);
         }
 
         account.setLoginCount(account.getLoginCount() + 1);
@@ -106,10 +109,10 @@ public class AccountService {
 
 
     public void updatePassword(String email, String oldPassword, String newPassword, String confirmationNewPassword) throws AccountNotFoundException, PasswordException {
-        AccountEntity accountEntity = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException("Account not found"));
+        AccountEntity accountEntity = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException(ACCOUNT_NOT_FOUND));
 
         if (!passwordService.verifyPassword(oldPassword, accountEntity.getPassword())) {
-            throw new AccountNotFoundException("Account not found");
+            throw new AccountNotFoundException(ACCOUNT_NOT_FOUND);
         }
 
         if (newPassword.equals(confirmationNewPassword)) {
@@ -124,7 +127,7 @@ public class AccountService {
     }
 
     private boolean forceUpdatePassword(String email, String newPassword) throws AccountNotFoundException {
-        AccountEntity accountEntity = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException("Account not found"));
+        AccountEntity accountEntity = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException(ACCOUNT_NOT_FOUND));
         accountEntity.setPassword(passwordService.hashPassword(newPassword));
         accountEntity.setPasswordChangeCount(accountEntity.getPasswordChangeCount() + 1);
         accountEntity.setLastPasswordChangeDate(LocalDateTime.now());
@@ -136,11 +139,9 @@ public class AccountService {
     public void generateAndSendPassword(String email) throws MailServiceDisabledException, AccountNotFoundException {
         if (mailServiceEnabled) {
             String newPassword = PasswordService.generatePassayPassword();
-            boolean isUpdated = forceUpdatePassword(email, newPassword);
-            if (isUpdated) {
-                String body = "Votre mot de passe a été réinitialisé, voici votre nouveau mot de passe, vous pourrez le modifier une fois connecté : " + newPassword;
-                mailService.sendEmail(email, "Mot de passe modifié", body);
-            }
+            forceUpdatePassword(email, newPassword);
+            String body = "Votre mot de passe a été réinitialisé, voici votre nouveau mot de passe, vous pourrez le modifier une fois connecté : " + newPassword;
+            mailService.sendEmail(email, "Mot de passe modifié", body);
         } else {
             throw new MailServiceDisabledException("Email sending is disabled");
         }
@@ -149,7 +150,7 @@ public class AccountService {
 
 
     public boolean activateUser(String email, String activationKey) throws AccountNotFoundException {
-        AccountEntity account = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException("Account not found"));
+        AccountEntity account = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException(ACCOUNT_NOT_FOUND));
         if (account.getActivationKey().equals(activationKey) && !account.getEmailVerified()) {
             account.setEmailVerified(true);
             account.setActivationKey(null);
@@ -157,5 +158,10 @@ public class AccountService {
             return true;
         }
         return false;
+    }
+
+    public AccountInformationDto getAccountInformationDto(String email) throws AccountNotFoundException {
+        AccountEntity account = accountRepo.findByEmail(email).orElseThrow(() -> new AccountNotFoundException(ACCOUNT_NOT_FOUND));
+        return AccountInformationsMapper.entityToDto(account);
     }
 }

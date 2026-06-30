@@ -37,7 +37,7 @@ public class AccountEntity {
     @Column(name = "pseudo")
     private String pseudo;
     @Column(name = "email_verified")
-    private Boolean emailVerified;
+    private boolean emailVerified;
 
     @Column(name = "activation_key")
     private String activationKey;
@@ -149,11 +149,11 @@ public class AccountEntity {
         this.pseudo = pseudo;
     }
 
-    public Boolean getEmailVerified() {
+    public boolean getEmailVerified() {
         return emailVerified;
     }
 
-    public void setEmailVerified(Boolean emailVerified) {
+    public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
     }
 
