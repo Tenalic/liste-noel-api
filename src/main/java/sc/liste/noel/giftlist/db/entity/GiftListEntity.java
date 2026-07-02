@@ -13,6 +13,8 @@ public class GiftListEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_liste")
     private Long giftListId;
+    @Column(name = "share_token", unique = true, nullable = false, updatable = false)
+    private String shareToken;
     @Column(name = "email")
     private String owner;
     @Column(name = "nom_liste")
@@ -63,5 +65,13 @@ public class GiftListEntity {
 
     public void setIsPublic(Boolean isPublic) {
         this.isPublic = isPublic;
+    }
+
+    public String getShareToken() {
+        return shareToken;
+    }
+
+    public void setShareToken(String shareToken) {
+        this.shareToken = shareToken;
     }
 }

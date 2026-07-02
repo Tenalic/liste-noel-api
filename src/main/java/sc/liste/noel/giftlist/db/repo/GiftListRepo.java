@@ -15,5 +15,9 @@ public interface GiftListRepo extends CrudRepository<GiftListEntity, Long> {
 
 	GiftListEntity findByGiftListId(Long giftListId);
 
+	GiftListEntity findByShareToken(String shareToken);
+
+	boolean existsByShareToken(String shareToken);
+
 
 }

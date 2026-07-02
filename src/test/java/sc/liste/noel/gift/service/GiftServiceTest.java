@@ -9,9 +9,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import sc.liste.noel.common.exception.ForbiddenModificationException;
+import sc.liste.noel.common.exception.GiftListNotFoundException;
 import sc.liste.noel.common.service.MailService;
 import sc.liste.noel.gift.db.entity.GiftEntity;
 import sc.liste.noel.gift.db.repo.GiftRepo;
+import sc.liste.noel.giftlist.dto.GiftListDto;
 import sc.liste.noel.giftlist.service.GiftListService;
 
 import java.util.NoSuchElementException;
@@ -41,6 +43,12 @@ class GiftServiceTest {
     // Helpers
     // -------------------------------------------------------------------------
 
+    private GiftListDto buildGiftListDto(Long id) {
+        GiftListDto giftListDto = new GiftListDto();
+        giftListDto.setGiftListId(id);
+        return giftListDto;
+    }
+
     private GiftEntity buildGift(Long giftId, Long giftListId, String title, String description, String url, int priority) {
         GiftEntity entity = new GiftEntity();
         entity.setGiftId(giftId);
@@ -63,8 +71,10 @@ class GiftServiceTest {
 
         @Test
         @DisplayName("sauvegarde un GiftEntity avec les bons champs")
-        void savesGiftEntity_withCorrectFields() {
-            giftService.addGiftToGiftList("Nintendo Switch", "https://shop.com", "Console de jeu", "42", "owner@test.com", 2);
+        void savesGiftEntity_withCorrectFields() throws GiftListNotFoundException {
+            GiftListDto giftListDto = buildGiftListDto(42L);
+            when(giftListService.getGiftListByShareToken(anyString())).thenReturn(giftListDto);
+            giftService.addGiftToGiftList("Nintendo Switch", "https://shop.com", "Console de jeu", "42", 2);
 
             ArgumentCaptor<GiftEntity> captor = ArgumentCaptor.forClass(GiftEntity.class);
             verify(giftRepo).save(captor.capture());
@@ -80,8 +90,10 @@ class GiftServiceTest {
 
         @Test
         @DisplayName("le champ taken est toujours false à la création")
-        void takenIsAlwaysFalse_onCreation() {
-            giftService.addGiftToGiftList("Livre", null, null, "1", "owner@test.com", 1);
+        void takenIsAlwaysFalse_onCreation() throws GiftListNotFoundException {
+            GiftListDto giftListDto = buildGiftListDto(1L);
+            when(giftListService.getGiftListByShareToken(anyString())).thenReturn(giftListDto);
+            giftService.addGiftToGiftList("Livre", null, null, "1", 1);
 
             ArgumentCaptor<GiftEntity> captor = ArgumentCaptor.forClass(GiftEntity.class);
             verify(giftRepo).save(captor.capture());

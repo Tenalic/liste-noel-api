@@ -19,10 +19,7 @@ import sc.liste.noel.giftlist.dto.GiftListContextDto;
 import sc.liste.noel.giftlist.dto.GiftListDto;
 import sc.liste.noel.giftlist.mapper.GiftListMapper;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class GiftListService {
@@ -59,6 +56,17 @@ public class GiftListService {
         giftListEntity.setOwner(owner);
         giftListEntity.setIsPublic(isPublic);
 
+        int attempts = 0;
+        String token;
+        do {
+            if (attempts++ > 5) {
+                throw new IllegalStateException("Impossible de générer un token unique");
+            }
+            token = UUID.randomUUID().toString().replace("-", "");
+        } while (giftListRepo.existsByShareToken(token));
+
+        giftListEntity.setShareToken(token);
+
         giftListRepo.save(giftListEntity);
     }
 
@@ -69,14 +77,14 @@ public class GiftListService {
     }
 
 
-    public GiftListDto getGiftListById(Long id) throws GiftListNotFoundException {
-        GiftListEntity giftListEntity = giftListRepo.findByGiftListId(id);
+    public GiftListDto getGiftListByShareToken(String shareToken) throws GiftListNotFoundException {
+        GiftListEntity giftListEntity = giftListRepo.findByShareToken(shareToken);
         GiftListDto giftListDto = GiftListMapper.entityToDto(giftListEntity);
         if (giftListDto != null) {
-            giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, id));
+            giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, shareToken));
             return giftListDto;
         } else {
-            throw new GiftListNotFoundException("Gift list not found: " + id);
+            throw new GiftListNotFoundException("Gift list not found: " + shareToken);
         }
     }
 
@@ -92,7 +100,7 @@ public class GiftListService {
         List<GiftListDto> giftListDtos = GiftListMapper.entitiesToDtosWithoutGifts(giftListEntities);
 
         giftListDtos.forEach(giftListDto -> {
-                    giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, giftListDto.getGiftListId()));
+                    giftListDto.setShareUrl(GiftListMapper.buildShareUrl(baseUrl, giftListDto.getShareToken()));
                     try {
                         this.replaceEmailsWithPseudo(giftListDto);
                     } catch (AccountNotFoundException e) {
@@ -104,8 +112,8 @@ public class GiftListService {
     }
 
     @Transactional
-    public void updatePublic(Long giftListId, boolean isPublic, String email) throws ForbiddenModificationException, GiftListNotFoundException {
-        GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
+    public void updatePublic(String shareToken, boolean isPublic, String email) throws ForbiddenModificationException, GiftListNotFoundException {
+        GiftListEntity giftListEntity = giftListRepo.findByShareToken(shareToken);
         if (giftListEntity == null) {
             throw new GiftListNotFoundException("Gift list not found");
         }
@@ -118,8 +126,8 @@ public class GiftListService {
     }
 
     @Transactional
-    public void updateName(Long giftListId, String name, String email) throws ForbiddenModificationException, GiftListNotFoundException {
-        GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
+    public void updateName(String  shareToken, String name, String email) throws ForbiddenModificationException, GiftListNotFoundException {
+        GiftListEntity giftListEntity = giftListRepo.findByShareToken(shareToken);
         if (giftListEntity == null) {
             throw new GiftListNotFoundException("Gift list not found");
         }
@@ -173,8 +181,8 @@ public class GiftListService {
     }
 
     @Transactional
-
-    public void toggleFavorite(Long giftListId, String email) {
+    public void toggleFavorite(String shareToken, String email) {
+        Long giftListId = giftListRepo.findByShareToken(shareToken).getGiftListId();
         FavoriteEntity existingFavorite = favoriteRepo.findByEmailAndGiftListId(email, giftListId);
         if (existingFavorite != null) {
             favoriteRepo.delete(existingFavorite);
@@ -192,7 +200,7 @@ public class GiftListService {
                     giftDescription,
                     giftUrl,
                     giftListEntity.getName(),
-                    GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getGiftListId()));
+                    GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getShareToken()));
             String emailSubject = "Objet supprimé de la liste : " + giftListEntity.getName();
 
             List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByGiftListId(giftListEntity.getGiftListId());
@@ -222,7 +230,7 @@ public class GiftListService {
                     urlUpdate,
                     GiftMapper.mapPriorityLabel(priorityUpdate),
                     giftListEntity.getName(),
-                    GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getGiftListId())
+                    GiftListMapper.buildShareUrl(baseUrl, giftListEntity.getShareToken())
             );
             String emailSubject = "Objet modifié de la liste : " + giftListEntity.getName();
 
@@ -235,8 +243,8 @@ public class GiftListService {
 
     @Transactional
 
-    public String deleteGiftList(Long giftListId, String email) throws ForbiddenModificationException, GiftListNotFoundException {
-        GiftListEntity giftListEntity = giftListRepo.findByGiftListId(giftListId);
+    public String deleteGiftList(String shareToken, String email) throws ForbiddenModificationException, GiftListNotFoundException {
+        GiftListEntity giftListEntity = giftListRepo.findByShareToken(shareToken);
         if (giftListEntity != null) {
             if (giftListEntity.getOwner().equals(email)) {
                 List<FavoriteEntity> favoriteEntityList = favoriteRepo.findByGiftListId(giftListEntity.getGiftListId());
@@ -252,8 +260,8 @@ public class GiftListService {
     }
 
 
-    public GiftListContextDto getGiftListWithContext(Long id, String email) throws GiftListNotFoundException, AccountNotFoundException {
-        GiftListDto giftList = this.getGiftListById(id);
+    public GiftListContextDto getGiftListWithContext(String shareToken, String email) throws GiftListNotFoundException, AccountNotFoundException {
+        GiftListDto giftList = this.getGiftListByShareToken(shareToken);
 
         GiftListContextDto giftListContext = new GiftListContextDto(giftList);
 
@@ -266,7 +274,7 @@ public class GiftListService {
                 giftListContext.setFavorite(
                         this.getFavoriteGiftListsOfEmail(email)
                                 .stream()
-                                .anyMatch(f -> Objects.equals(f.getGiftListId(), id))
+                                .anyMatch(f -> Objects.equals(f.getShareToken(), shareToken))
                 );
             }
         } else {

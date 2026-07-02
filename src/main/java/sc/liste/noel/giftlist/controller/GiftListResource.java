@@ -44,7 +44,7 @@ import static sc.liste.noel.common.constant.Constants.*;
  *
  * <p>La plupart des opérations nécessitent une authentification : l'email
  * de l'utilisateur est extrait du {@link Principal} fourni par Spring Security.
- * La consultation d'une liste ({@code GET /{giftListId}}) est accessible sans
+ * La consultation d'une liste ({@code GET /{shareToken}}) est accessible sans
  * authentification, avec une vue anonymisée dans ce cas.</p>
  */
 @Tag(name = "Listes de cadeaux", description = "Opérations sur les listes de cadeaux et leurs favoris")
@@ -80,7 +80,7 @@ public class GiftListResource {
      * @param principal principal Spring Security représentant l'utilisateur connecté
      * @param locale    locale courante pour l'internationalisation des messages d'erreur
      * @return {@code 200 OK} avec les listes personnelles et favorites ;
-     *         {@code 404 Not Found} si le compte est introuvable
+     * {@code 404 Not Found} si le compte est introuvable
      */
     @Operation(summary = "Récupérer mes listes et mes favoris",
             description = "Retourne les listes de cadeaux appartenant à l'utilisateur connecté ainsi que ses listes favorites.")
@@ -114,34 +114,32 @@ public class GiftListResource {
      * Dans le cas contraire, le contexte indique si la liste appartient à l'utilisateur
      * et s'il l'a mise en favori.</p>
      *
-     * @param principal   principal Spring Security, ou {@code null} si non authentifié
-     * @param giftListId  identifiant de la liste, transmis dans le chemin de la requête
-     * @param locale      locale courante pour l'internationalisation des messages d'erreur
+     * @param principal  principal Spring Security, ou {@code null} si non authentifié
+     * @param shareToken identifiant de la liste, transmis dans le chemin de la requête
+     * @param locale     locale courante pour l'internationalisation des messages d'erreur
      * @return {@code 200 OK} avec le détail de la liste et son contexte ;
-     *         {@code 404 Not Found} si la liste est introuvable ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 404 Not Found} si la liste est introuvable ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Récupérer une liste de cadeaux",
             description = "Retourne le détail d'une liste avec son contexte : propriété, favori, et anonymisation si non connecté.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Liste récupérée avec succès"),
-            @ApiResponse(responseCode = "404", description = "Liste introuvable"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
-    @GetMapping("/{giftListId}")
+    @ApiResponse(responseCode = "200", description = "Liste récupérée avec succès")
+    @ApiResponse(responseCode = "404", description = "Liste introuvable")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
+    @GetMapping("/{shareToken}")
     public ResponseEntity<GiftListResponse> getGiftList(
             Principal principal,
-            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId,
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String shareToken,
             Locale locale) {
         String email = principal != null ? principal.getName() : null;
         try {
-            GiftListContextDto giftList = giftListService.getGiftListWithContext(Long.valueOf(giftListId), email);
+            GiftListContextDto giftList = giftListService.getGiftListWithContext(shareToken, email);
             return ResponseEntity.ok(new GiftListResponse("Succes", Constants.API_RETURN_OK, giftList, giftList.isOwnedByCurrentUser(), giftList.isFavorite()));
         } catch (GiftListNotFoundException e) {
-            LOGGER.warn("The gift list {} was not found in the database", giftListId);
+            LOGGER.warn("The gift list {} was not found in the database", shareToken);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new GiftListResponse(messageService.getMessage(GIFTLIST_NOT_FOUND, locale), Constants.API_RETURN_KO));
         } catch (Exception e) {
-            LOGGER.error("Error while retrieving the gift list {}", giftListId, e);
+            LOGGER.error("Error while retrieving the gift list {}", shareToken, e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -153,26 +151,24 @@ public class GiftListResource {
      * Cette opération est idempotente du point de vue du résultat final.</p>
      *
      * @param principal  principal Spring Security représentant l'utilisateur connecté
-     * @param giftListId identifiant de la liste, transmis dans le chemin de la requête
+     * @param shareToken identifiant de la liste, transmis dans le chemin de la requête
      * @return {@code 200 OK} si la bascule a réussi ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Ajouter ou retirer une liste des favoris",
             description = "Bascule l'état favori d'une liste : l'ajoute si absente, la retire si présente.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Favori mis à jour avec succès"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
-    @PostMapping("/{giftListId}/favoris")
+    @ApiResponse(responseCode = "200", description = "Favori mis à jour avec succès")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
+    @PostMapping("/{shareToken}/favoris")
     public ResponseEntity<GenericResponse> addFavorite(
             Principal principal,
-            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId) {
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String shareToken) {
         String email = principal.getName();
         try {
-            giftListService.toggleFavorite(Long.valueOf(giftListId), email);
+            giftListService.toggleFavorite(shareToken, email);
             return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
         } catch (Exception e) {
-            LOGGER.error("Error while updating favorite {} {}", giftListId, email, e);
+            LOGGER.error("Error while updating favorite {} {}", shareToken, email, e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -203,29 +199,27 @@ public class GiftListResource {
      * Les entrées favoris référençant cette liste sont également supprimées.</p>
      *
      * @param locale     locale courante pour l'internationalisation des messages
-     * @param giftListId identifiant de la liste à supprimer, transmis dans le chemin de la requête
+     * @param shareToken identifiant de la liste à supprimer, transmis dans le chemin de la requête
      * @param principal  principal Spring Security représentant l'utilisateur connecté
      * @return {@code 200 OK} avec un message de confirmation ;
-     *         {@code 403 Forbidden} si l'utilisateur n'est pas propriétaire de la liste ;
-     *         {@code 404 Not Found} si la liste est introuvable ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 403 Forbidden} si l'utilisateur n'est pas propriétaire de la liste ;
+     * {@code 404 Not Found} si la liste est introuvable ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Supprimer une liste de cadeaux",
             description = "Supprime la liste et toutes ses entrées favoris. Réservé au propriétaire de la liste.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Liste supprimée avec succès"),
-            @ApiResponse(responseCode = "403", description = "Suppression interdite : l'utilisateur n'est pas propriétaire"),
-            @ApiResponse(responseCode = "404", description = "Liste introuvable"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
-    @DeleteMapping("/{giftListId}")
+    @ApiResponse(responseCode = "200", description = "Liste supprimée avec succès")
+    @ApiResponse(responseCode = "403", description = "Suppression interdite : l'utilisateur n'est pas propriétaire")
+    @ApiResponse(responseCode = "404", description = "Liste introuvable")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
+    @DeleteMapping("/{shareToken}")
     public ResponseEntity<GenericResponse> deleteGiftList(
             Locale locale,
-            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId,
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String shareToken,
             Principal principal) {
         String email = principal.getName();
         try {
-            String response = giftListService.deleteGiftList(Long.valueOf(giftListId), email);
+            String response = giftListService.deleteGiftList(shareToken, email);
             return ResponseEntity.ok(new GenericResponse(response, Constants.API_RETURN_OK));
         } catch (ForbiddenModificationException e) {
             LOGGER.warn("warning while deleting the gift list {}", e.getMessage());
@@ -234,7 +228,7 @@ public class GiftListResource {
             LOGGER.warn("warning while deleting the gift list {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new GenericResponse(messageService.getMessage(GIFTLIST_NOT_FOUND, locale), Constants.API_RETURN_KO));
         } catch (Exception e) {
-            LOGGER.error("Error while deleting the gift list {} for the email {}", giftListId, email, e);
+            LOGGER.error("Error while deleting the gift list {} for the email {}", shareToken, email, e);
             return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));
         }
     }
@@ -249,27 +243,25 @@ public class GiftListResource {
      * @param principal  principal Spring Security représentant l'utilisateur connecté
      * @param gift       corps de la requête contenant les informations du cadeau
      *                   (titre, URL, description, priorité)
-     * @param giftListId identifiant de la liste cible, transmis dans le chemin de la requête
+     * @param shareToken identifiant de la liste cible, transmis dans le chemin de la requête
      * @param locale     locale courante pour l'internationalisation des messages d'erreur
      * @return {@code 200 OK} si le cadeau a été ajouté avec succès ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Ajouter un cadeau à une liste",
-            description = "Ajoute un nouveau cadeau à la liste identifiée par giftListId.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Cadeau ajouté avec succès"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
-    @PostMapping("/{giftListId}/cadeau")
+            description = "Ajoute un nouveau cadeau à la liste identifiée par shareToken.")
+    @ApiResponse(responseCode = "200", description = "Cadeau ajouté avec succès")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
+    @PostMapping("/{shareToken}/cadeau")
     public ResponseEntity<GenericResponse> addGift(
             Principal principal,
             @RequestBody @Valid GiftDto gift,
-            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId,
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String shareToken,
             Locale locale) {
         String email = principal.getName();
         LOGGER.info("Adding gift {} by user {}", gift.getTitle(), email);
         try {
-            giftService.addGiftToGiftList(gift.getTitle(), gift.getUrl(), gift.getDescription(), giftListId, email, gift.getPriorityValue());
+            giftService.addGiftToGiftList(gift.getTitle(), gift.getUrl(), gift.getDescription(), shareToken, gift.getPriorityValue());
             return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));
@@ -303,30 +295,28 @@ public class GiftListResource {
      *
      * <p>Seul le propriétaire de la liste est autorisé à modifier sa visibilité.</p>
      *
-     * @param giftListId    identifiant de la liste, transmis dans le chemin de la requête
+     * @param shareToken    identifiant de la liste, transmis dans le chemin de la requête
      * @param publicRequest corps de la requête contenant le nouveau statut de visibilité
      * @param locale        locale courante pour l'internationalisation des messages d'erreur
      * @param principal     principal Spring Security représentant l'utilisateur connecté
      * @return {@code 200 OK} si la visibilité a été mise à jour ;
-     *         {@code 404 Not Found} si la liste est introuvable ;
-     *         {@code 403 Forbidden} si l'utilisateur n'est pas propriétaire de la liste
+     * {@code 404 Not Found} si la liste est introuvable ;
+     * {@code 403 Forbidden} si l'utilisateur n'est pas propriétaire de la liste
      */
     @Operation(summary = "Modifier la visibilité d'une liste",
             description = "Passe la liste en public ou en privé. Réservé au propriétaire de la liste.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Visibilité mise à jour avec succès"),
-            @ApiResponse(responseCode = "403", description = "Modification interdite : l'utilisateur n'est pas propriétaire"),
-            @ApiResponse(responseCode = "404", description = "Liste introuvable")
-    })
-    @PutMapping("/{giftListId}/publique")
+    @ApiResponse(responseCode = "200", description = "Visibilité mise à jour avec succès")
+    @ApiResponse(responseCode = "403", description = "Modification interdite : l'utilisateur n'est pas propriétaire")
+    @ApiResponse(responseCode = "404", description = "Liste introuvable")
+    @PutMapping("/{shareToken}/publique")
     public ResponseEntity<GenericResponse> updatePublic(
-            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId,
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String shareToken,
             @RequestBody @Valid PublicRequest publicRequest,
             Locale locale,
             Principal principal) {
         String email = principal.getName();
         try {
-            giftListService.updatePublic(Long.valueOf(giftListId), publicRequest.isPublic(), email);
+            giftListService.updatePublic(shareToken, publicRequest.isPublic(), email);
             return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
         } catch (GiftListNotFoundException e) {
             LOGGER.warn(e.getMessage());
@@ -337,15 +327,15 @@ public class GiftListResource {
         }
     }
 
-    @PutMapping("/{giftListId}/nom")
+    @PutMapping("/{shareToken}/nom")
     public ResponseEntity<GenericResponse> updateName(
-            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String giftListId,
+            @Parameter(description = "Identifiant de la liste de cadeaux") @PathVariable String shareToken,
             @RequestBody @Valid NameRequest nameRequest,
             Locale locale,
             Principal principal) {
         String email = principal.getName();
         try {
-            giftListService.updateName(Long.valueOf(giftListId), nameRequest.listName(), email);
+            giftListService.updateName(shareToken, nameRequest.listName(), email);
             return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
         } catch (GiftListNotFoundException e) {
             LOGGER.warn(e.getMessage());

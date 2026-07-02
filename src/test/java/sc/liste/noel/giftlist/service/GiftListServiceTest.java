@@ -70,6 +70,7 @@ class GiftListServiceTest {
         entity.setOwner(owner);
         entity.setName(name);
         entity.setIsPublic(isPublic);
+        entity.setShareToken(id.toString() + "L");
         return entity;
     }
 
@@ -164,10 +165,10 @@ class GiftListServiceTest {
         @Test
         @DisplayName("retourne le DTO avec une shareUrl construite")
         void returnsDto_withShareUrl() throws GiftListNotFoundException {
-            when(giftListRepo.findByGiftListId(1L))
+            when(giftListRepo.findByShareToken("1L"))
                     .thenReturn(buildGiftListEntity(1L, "owner@test.com", "Ma liste", true));
 
-            GiftListDto result = giftListService.getGiftListById(1L);
+            GiftListDto result = giftListService.getGiftListByShareToken("1L");
 
             assertThat(result).isNotNull();
             assertThat(result.getShareUrl()).contains("1");
@@ -176,9 +177,9 @@ class GiftListServiceTest {
         @Test
         @DisplayName("lève GiftListNotFoundException si la liste est introuvable")
         void throwsGiftListNotFoundException_whenNotFound() {
-            when(giftListRepo.findByGiftListId(99L)).thenReturn(null);
+            when(giftListRepo.findByShareToken("99L")).thenReturn(null);
 
-            assertThatThrownBy(() -> giftListService.getGiftListById(99L))
+            assertThatThrownBy(() -> giftListService.getGiftListByShareToken("99L"))
                     .isInstanceOf(GiftListNotFoundException.class);
         }
     }
@@ -282,9 +283,9 @@ class GiftListServiceTest {
         @DisplayName("met à jour la visibilité quand le propriétaire est correct")
         void updatesVisibility_whenOwnerMatches() throws Exception {
             GiftListEntity entity = buildGiftListEntity(1L, "owner@test.com", "Liste", false);
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(entity);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(entity);
 
-            giftListService.updatePublic(1L, true, "owner@test.com");
+            giftListService.updatePublic("1L", true, "owner@test.com");
 
             assertThat(entity.getIsPublic()).isTrue();
             verify(giftListRepo).save(entity);
@@ -293,9 +294,9 @@ class GiftListServiceTest {
         @Test
         @DisplayName("lève GiftListNotFoundException si la liste est introuvable")
         void throwsGiftListNotFoundException_whenListNotFound() {
-            when(giftListRepo.findByGiftListId(99L)).thenReturn(null);
+            when(giftListRepo.findByShareToken("99L")).thenReturn(null);
 
-            assertThatThrownBy(() -> giftListService.updatePublic(99L, true, "owner@test.com"))
+            assertThatThrownBy(() -> giftListService.updatePublic("99L", true, "owner@test.com"))
                     .isInstanceOf(GiftListNotFoundException.class);
             verify(giftListRepo, never()).save(any());
         }
@@ -304,9 +305,9 @@ class GiftListServiceTest {
         @DisplayName("lève ForbiddenModificationException si l'email ne correspond pas au propriétaire")
         void throwsForbiddenModificationException_whenNotOwner() {
             GiftListEntity entity = buildGiftListEntity(1L, "owner@test.com", "Liste", false);
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(entity);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(entity);
 
-            assertThatThrownBy(() -> giftListService.updatePublic(1L, true, "other@test.com"))
+            assertThatThrownBy(() -> giftListService.updatePublic("1L", true, "other@test.com"))
                     .isInstanceOf(ForbiddenModificationException.class);
             verify(giftListRepo, never()).save(any());
         }
@@ -420,10 +421,12 @@ class GiftListServiceTest {
         @Test
         @DisplayName("supprime le favori s'il existe")
         void deletesFavorite_whenExists() {
+            GiftListEntity giftList = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
             FavoriteEntity favorite = buildFavorite("user@test.com", 1L);
             when(favoriteRepo.findByEmailAndGiftListId("user@test.com", 1L)).thenReturn(favorite);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(giftList);
 
-            giftListService.toggleFavorite(1L, "user@test.com");
+            giftListService.toggleFavorite("1L", "user@test.com");
 
             verify(favoriteRepo).delete(favorite);
             verify(favoriteRepo, never()).save(any());
@@ -432,9 +435,11 @@ class GiftListServiceTest {
         @Test
         @DisplayName("ajoute le favori s'il n'existe pas")
         void addsFavorite_whenNotExists() {
+            GiftListEntity giftList = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
             when(favoriteRepo.findByEmailAndGiftListId("user@test.com", 1L)).thenReturn(null);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(giftList);
 
-            giftListService.toggleFavorite(1L, "user@test.com");
+            giftListService.toggleFavorite("1L", "user@test.com");
 
             verify(favoriteRepo, never()).delete(any());
             verify(favoriteRepo).save(any(FavoriteEntity.class));
@@ -547,10 +552,10 @@ class GiftListServiceTest {
         void deletesListAndFavorites_andReturnsConfirmation() throws Exception {
             GiftListEntity giftList = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
             List<FavoriteEntity> favorites = List.of(buildFavorite("fav@test.com", 1L));
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(giftList);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(giftList);
             when(favoriteRepo.findByGiftListId(1L)).thenReturn(favorites);
 
-            String result = giftListService.deleteGiftList(1L, "owner@test.com");
+            String result = giftListService.deleteGiftList("1L", "owner@test.com");
 
             verify(favoriteRepo).deleteAll(favorites);
             verify(giftListRepo).delete(giftList);
@@ -561,9 +566,9 @@ class GiftListServiceTest {
         @DisplayName("lève ForbiddenModificationException si l'utilisateur n'est pas propriétaire")
         void throwsForbiddenModificationException_whenNotOwner() {
             GiftListEntity giftList = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(giftList);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(giftList);
 
-            assertThatThrownBy(() -> giftListService.deleteGiftList(1L, "other@test.com"))
+            assertThatThrownBy(() -> giftListService.deleteGiftList("1L", "other@test.com"))
                     .isInstanceOf(ForbiddenModificationException.class);
             verify(giftListRepo, never()).delete(any());
             verify(favoriteRepo, never()).deleteAll(any());
@@ -572,9 +577,9 @@ class GiftListServiceTest {
         @Test
         @DisplayName("lève GiftListNotFoundException si la liste est introuvable")
         void throwsGiftListNotFoundException_whenListNotFound() {
-            when(giftListRepo.findByGiftListId(99L)).thenReturn(null);
+            when(giftListRepo.findByShareToken("99L")).thenReturn(null);
 
-            assertThatThrownBy(() -> giftListService.deleteGiftList(99L, "owner@test.com"))
+            assertThatThrownBy(() -> giftListService.deleteGiftList("99L", "owner@test.com"))
                     .isInstanceOf(GiftListNotFoundException.class);
         }
     }
@@ -591,11 +596,11 @@ class GiftListServiceTest {
         @DisplayName("marque la liste comme appartenant à l'utilisateur courant")
         void setsOwnedByCurrentUser_whenOwnerMatches() throws Exception {
             GiftListEntity entity = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(entity);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(entity);
             when(accountRepo.findByEmail("owner@test.com"))
                     .thenReturn(Optional.of(buildAccount("owner@test.com", "OwnerPseudo")));
 
-            GiftListContextDto result = giftListService.getGiftListWithContext(1L, "owner@test.com");
+            GiftListContextDto result = giftListService.getGiftListWithContext("1L", "owner@test.com");
 
             assertThat(result.isOwnedByCurrentUser()).isTrue();
         }
@@ -604,11 +609,11 @@ class GiftListServiceTest {
         @DisplayName("anonymise les cadeaux si l'utilisateur n'est pas connecté (email null)")
         void anonymizesGifts_whenEmailIsNull() throws Exception {
             GiftListEntity entity = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(entity);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(entity);
             when(accountRepo.findByEmail("owner@test.com"))
                     .thenReturn(Optional.of(buildAccount("owner@test.com", "OwnerPseudo")));
 
-            GiftListContextDto result = giftListService.getGiftListWithContext(1L, null);
+            GiftListContextDto result = giftListService.getGiftListWithContext("1L", null);
 
             assertThat(result.isFavorite()).isFalse();
             result.getGifts().forEach(gift -> {
@@ -621,9 +626,9 @@ class GiftListServiceTest {
         @Test
         @DisplayName("lève GiftListNotFoundException si la liste est introuvable")
         void throwsGiftListNotFoundException_whenListNotFound() {
-            when(giftListRepo.findByGiftListId(99L)).thenReturn(null);
+            when(giftListRepo.findByShareToken("99L")).thenReturn(null);
 
-            assertThatThrownBy(() -> giftListService.getGiftListWithContext(99L, "user@test.com"))
+            assertThatThrownBy(() -> giftListService.getGiftListWithContext("99L", "user@test.com"))
                     .isInstanceOf(GiftListNotFoundException.class);
         }
 
@@ -631,7 +636,7 @@ class GiftListServiceTest {
         @DisplayName("définit isFavorite selon les favoris de l'utilisateur non-propriétaire")
         void setsFavorite_basedOnUserFavorites_whenNotOwner() throws Exception {
             GiftListEntity entity = buildGiftListEntity(1L, "owner@test.com", "Ma liste", true);
-            when(giftListRepo.findByGiftListId(1L)).thenReturn(entity);
+            when(giftListRepo.findByShareToken("1L")).thenReturn(entity);
             when(accountRepo.findByEmail("owner@test.com"))
                     .thenReturn(Optional.of(buildAccount("owner@test.com", "OwnerPseudo")));
 
@@ -641,7 +646,7 @@ class GiftListServiceTest {
                     .thenReturn(List.of(buildFavorite("other@test.com", 1L)));
             when(giftListRepo.findByGiftListId(1L)).thenReturn(entity);
 
-            GiftListContextDto result = giftListService.getGiftListWithContext(1L, "other@test.com");
+            GiftListContextDto result = giftListService.getGiftListWithContext("1L", "other@test.com");
 
             assertThat(result.isFavorite()).isTrue();
         }

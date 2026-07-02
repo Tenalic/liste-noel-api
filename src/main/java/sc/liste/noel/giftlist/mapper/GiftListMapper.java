@@ -36,14 +36,14 @@ public class GiftListMapper {
         GiftListDto giftListDto = new GiftListDto();
         giftListDto.setName(giftListEntity.getName());
         giftListDto.setOwner(giftListEntity.getOwner());
-        giftListDto.setGiftListId(giftListEntity.getGiftListId());
         giftListDto.setPublic(giftListEntity.getIsPublic());
+        giftListDto.setShareToken(giftListEntity.getShareToken());
         giftListDto.setGiftCount(Optional.of(giftListEntity).map(GiftListEntity::getGifts).map(List::size).orElse(0));
         return giftListDto;
     }
 
-    public static String buildShareUrl(String baseUrl, Long giftListId) {
-        return baseUrl + "/liste/" + giftListId;
+    public static String buildShareUrl(String baseUrl, String shareToken) {
+        return baseUrl + "/liste/" + shareToken;
     }
 
 }

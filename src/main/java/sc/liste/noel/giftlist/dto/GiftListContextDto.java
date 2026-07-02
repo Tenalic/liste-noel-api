@@ -21,6 +21,7 @@ public class GiftListContextDto extends GiftListDto {
         this.setOwnerPseudo(giftList.getOwnerPseudo());
         this.setPublic(giftList.isPublic());
         this.setGiftCount(giftList.getGiftCount());
+        this.setShareToken(giftList.getShareToken());
     }
 
     public boolean isOwnedByCurrentUser() {

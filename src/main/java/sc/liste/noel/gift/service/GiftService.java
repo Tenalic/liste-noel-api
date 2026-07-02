@@ -3,6 +3,7 @@ package sc.liste.noel.gift.service;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import sc.liste.noel.common.exception.ForbiddenModificationException;
+import sc.liste.noel.common.exception.GiftListNotFoundException;
 import sc.liste.noel.common.service.MailService;
 import sc.liste.noel.gift.db.entity.GiftEntity;
 import sc.liste.noel.gift.db.repo.GiftRepo;
@@ -19,10 +20,11 @@ public class GiftService {
         this.giftListService = giftListService;
     }
 
-    public void addGiftToGiftList(String title, String url, String description, String giftListId, String owner, int priority) {
+    public void addGiftToGiftList(String title, String url, String description, String shareToken, int priority) throws GiftListNotFoundException {
+        Long giftListId = giftListService.getGiftListByShareToken(shareToken).getGiftListId();
         GiftEntity giftEntity = new GiftEntity();
         giftEntity.setDescription(description);
-        giftEntity.setGiftListId(Long.valueOf(giftListId));
+        giftEntity.setGiftListId(giftListId);
         giftEntity.setTitle(title);
         giftEntity.setTaken(false);
         giftEntity.setUrl(url);

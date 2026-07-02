@@ -29,6 +29,8 @@ public class GiftListDto implements Serializable {
     @JsonProperty("pseudoProprietaire")
     private String ownerPseudo;
 
+    private String shareToken;
+
     private boolean isPublic;
 
 
@@ -96,5 +98,13 @@ public class GiftListDto implements Serializable {
 
     public void setGiftCount(int giftCount) {
         this.giftCount = giftCount;
+    }
+
+    public String getShareToken() {
+        return shareToken;
+    }
+
+    public void setShareToken(String shareToken) {
+        this.shareToken = shareToken;
     }
 }
