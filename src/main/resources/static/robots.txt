@@ -1,0 +1,11 @@
+# robots.txt — Gift List
+# Autorise l'exploration de tout le site public.
+User-agent: *
+Allow: /
+
+# Pages privées / techniques : inutiles à indexer.
+Disallow: /mon-compte
+Disallow: /deconnexion
+Disallow: /modifier-mot-de-passe
+
+Sitemap: https://living-stevana-tenalic-07c42fee.koyeb.app/
