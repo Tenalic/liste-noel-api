@@ -88,6 +88,15 @@ public class GiftListService {
         }
     }
 
+    public Long getIdListEntityByShareToken(String shareToken) throws GiftListNotFoundException {
+        GiftListEntity giftListEntity = giftListRepo.findByShareToken(shareToken);
+        if (giftListEntity != null) {
+            return giftListEntity.getGiftListId();
+        } else {
+            throw new GiftListNotFoundException("Gift list not found: " + shareToken);
+        }
+    }
+
     // FIXME create a GiftListSimpleEntity repo without the gifts (perf)
     public List<GiftListDto> getGiftLists(boolean isPublic, String name) {
         List<GiftListEntity> giftListEntities;

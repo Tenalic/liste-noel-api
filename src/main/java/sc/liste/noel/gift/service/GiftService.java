@@ -21,7 +21,7 @@ public class GiftService {
     }
 
     public void addGiftToGiftList(String title, String url, String description, String shareToken, int priority) throws GiftListNotFoundException {
-        Long giftListId = giftListService.getGiftListByShareToken(shareToken).getGiftListId();
+        Long giftListId = giftListService.getIdListEntityByShareToken(shareToken);
         GiftEntity giftEntity = new GiftEntity();
         giftEntity.setDescription(description);
         giftEntity.setGiftListId(giftListId);
