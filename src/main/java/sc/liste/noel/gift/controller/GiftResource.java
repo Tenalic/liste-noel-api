@@ -68,16 +68,14 @@ public class GiftResource {
      * @param giftId    identifiant du cadeau à modifier, transmis dans le chemin de la requête
      * @param locale    locale courante pour l'internationalisation des messages d'erreur
      * @return {@code 200 OK} si la mise à jour a réussi ;
-     *         {@code 403 Forbidden} si l'utilisateur ne possède pas la liste du cadeau ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 403 Forbidden} si l'utilisateur ne possède pas la liste du cadeau ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Modifier un cadeau",
             description = "Met à jour le titre, la description, l'URL et la priorité d'un cadeau. Réservé au propriétaire de la liste.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Cadeau mis à jour avec succès"),
-            @ApiResponse(responseCode = "403", description = "Modification interdite : l'utilisateur n'est pas propriétaire"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
+    @ApiResponse(responseCode = "200", description = "Cadeau mis à jour avec succès")
+    @ApiResponse(responseCode = "403", description = "Modification interdite : l'utilisateur n'est pas propriétaire")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
     @PutMapping("/{giftId}")
     public ResponseEntity<GenericResponse> updateGift(
             Principal principal,
@@ -110,17 +108,15 @@ public class GiftResource {
      * @param giftId    identifiant du cadeau à supprimer, transmis dans le chemin de la requête
      * @param locale    locale courante pour l'internationalisation des messages d'erreur
      * @return {@code 200 OK} si la suppression a réussi ;
-     *         {@code 403 Forbidden} si le cadeau est introuvable ou si l'utilisateur
-     *         ne possède pas la liste du cadeau ;
-     *         {@code 500 Internal Server Error} en cas d'erreur inattendue
+     * {@code 403 Forbidden} si le cadeau est introuvable ou si l'utilisateur
+     * ne possède pas la liste du cadeau ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
      */
     @Operation(summary = "Supprimer un cadeau",
             description = "Supprime un cadeau et notifie les favoris de la liste par email. Réservé au propriétaire de la liste.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Cadeau supprimé avec succès"),
-            @ApiResponse(responseCode = "403", description = "Suppression interdite : cadeau introuvable ou utilisateur non propriétaire"),
-            @ApiResponse(responseCode = "500", description = "Erreur interne")
-    })
+    @ApiResponse(responseCode = "200", description = "Cadeau supprimé avec succès")
+    @ApiResponse(responseCode = "403", description = "Suppression interdite : cadeau introuvable ou utilisateur non propriétaire")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
     @DeleteMapping("/{giftId}")
     public ResponseEntity<GenericResponse> deleteGift(
             Principal principal,
