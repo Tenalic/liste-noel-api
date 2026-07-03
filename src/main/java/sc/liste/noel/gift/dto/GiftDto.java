@@ -9,7 +9,6 @@ import java.io.Serializable;
 public class GiftDto implements Serializable {
 
     @JsonProperty("idObjet")
-    @NotNull(message = "idObjet vide")
     private Long giftId;
 
     @JsonProperty("titre")
