@@ -54,7 +54,7 @@ public class GiftService {
 
         GiftEntity giftEntity = giftRepo.findByGiftId(giftId).orElseThrow();
 
-        giftListService.notifyGiftModificationToFavorites(giftId, giftEntity.getTitle(), giftEntity.getDescription(), giftEntity.getUrl(), giftEntity.getPriorityValue(), titleUpdate, descriptionUpdate, urlUpdate, priorityUpdate);
+        giftListService.notifyGiftModificationToFavorites(giftEntity.getGiftListId(), giftEntity.getTitle(), giftEntity.getDescription(), giftEntity.getUrl(), giftEntity.getPriorityValue(), titleUpdate, descriptionUpdate, urlUpdate, priorityUpdate);
 
         giftEntity.setTitle(titleUpdate);
         giftEntity.setDescription(descriptionUpdate);
