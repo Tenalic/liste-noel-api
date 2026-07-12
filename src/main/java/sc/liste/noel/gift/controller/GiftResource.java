@@ -3,7 +3,6 @@ package sc.liste.noel.gift.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
@@ -92,6 +91,7 @@ public class GiftResource {
             LOGGER.warn("Forbidden attempt to modify gift {} by person {}", giftId, email);
             return ResponseEntity.status(FORBIDDEN).body(new GenericResponse(exception.getMessage(), Constants.API_RETURN_KO));
         } catch (Exception e) {
+            LOGGER.error("[updateGift]", e);
             return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));
         }
     }
@@ -134,6 +134,7 @@ public class GiftResource {
             LOGGER.warn("Forbidden attempt to delete gift {} by person {}", giftId, email);
             return ResponseEntity.status(FORBIDDEN).body(new GenericResponse(e.getMessage(), Constants.API_RETURN_KO));
         } catch (Exception e) {
+            LOGGER.error("[deleteGift]", e);
             return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));
         }
     }
