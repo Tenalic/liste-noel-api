@@ -138,4 +138,47 @@ public class GiftResource {
             return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));
         }
     }
+
+    /**
+     * Bascule l'état « offert » d'un cadeau pour l'utilisateur connecté.
+     *
+     * <p>Si le cadeau n'est pas encore pris, l'utilisateur courant le prend.
+     * Si le cadeau est déjà pris par l'utilisateur courant, il le relâche.
+     * Si le cadeau est pris par quelqu'un d'autre, une erreur 403 est retournée.</p>
+     *
+     * @param principal principal Spring Security représentant l'utilisateur connecté
+     * @param giftId    identifiant du cadeau, transmis dans le chemin de la requête
+     * @param locale    locale courante pour l'internationalisation des messages d'erreur
+     * @return {@code 200 OK} si la bascule a réussi ;
+     * {@code 403 Forbidden} si le cadeau est pris par un autre utilisateur
+     * ou si l'utilisateur est le propriétaire de la liste ;
+     * {@code 500 Internal Server Error} en cas d'erreur inattendue
+     */
+    @Operation(summary = "Offrir / ne plus offrir un cadeau",
+            description = "Bascule l'état « offert » d'un cadeau : le prend si libre, le relâche si déjà pris par l'utilisateur courant.")
+    @ApiResponse(responseCode = "200", description = "État du cadeau mis à jour avec succès")
+    @ApiResponse(responseCode = "403", description = "Action interdite : cadeau pris par un autre ou propriétaire de la liste")
+    @ApiResponse(responseCode = "500", description = "Erreur interne")
+    @PostMapping("/{giftId}/offrir")
+    public ResponseEntity<GenericResponse> toggleOfferGift(
+            Principal principal,
+            @Parameter(description = "Identifiant du cadeau à offrir / ne plus offrir", required = true)
+            @PathVariable String giftId,
+            Locale locale) {
+        String email = principal.getName();
+        LOGGER.info("Toggle offer gift {} by user {}", giftId, email);
+        try {
+            giftService.toggleOfferGift(Long.valueOf(giftId), email);
+            return ResponseEntity.ok(new GenericResponse("Succes", Constants.API_RETURN_OK));
+        } catch (ForbiddenModificationException e) {
+            LOGGER.warn("Forbidden attempt to offer gift {} by person {}", giftId, email);
+            return ResponseEntity.status(FORBIDDEN).body(new GenericResponse(e.getMessage(), Constants.API_RETURN_KO));
+        } catch (NoSuchElementException e) {
+            LOGGER.warn("Gift not found {} by person {}", giftId, email);
+            return ResponseEntity.status(FORBIDDEN).body(new GenericResponse(e.getMessage(), Constants.API_RETURN_KO));
+        } catch (Exception e) {
+            LOGGER.error("[toggleOfferGift]", e);
+            return ResponseEntity.internalServerError().body(new GenericResponse(messageService.getMessage(API_GIFTLIST_ERROR_KEY, locale), Constants.API_RETURN_KO));
+        }
+    }
 }

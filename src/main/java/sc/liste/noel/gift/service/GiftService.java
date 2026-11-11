@@ -2,6 +2,8 @@ package sc.liste.noel.gift.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import sc.liste.noel.account.exception.AccountNotFoundException;
+import sc.liste.noel.account.service.AccountService;
 import sc.liste.noel.common.exception.ForbiddenModificationException;
 import sc.liste.noel.common.exception.GiftListNotFoundException;
 import sc.liste.noel.common.service.MailService;
@@ -14,10 +16,12 @@ public class GiftService {
 
     private final GiftRepo giftRepo;
     private final GiftListService giftListService;
+    private final AccountService accountService;
 
-    public GiftService(GiftRepo giftRepo, MailService mailService, GiftListService giftListService) {
+    public GiftService(GiftRepo giftRepo, MailService mailService, GiftListService giftListService, AccountService accountService) {
         this.giftRepo = giftRepo;
         this.giftListService = giftListService;
+        this.accountService = accountService;
     }
 
     public void addGiftToGiftList(String title, String url, String description, String shareToken, int priority) throws GiftListNotFoundException {
@@ -60,6 +64,52 @@ public class GiftService {
         giftEntity.setDescription(descriptionUpdate);
         giftEntity.setUrl(urlUpdate);
         giftEntity.setPriorityValue(priorityUpdate);
+
+        giftRepo.save(giftEntity);
+    }
+
+    /**
+     * Bascule l'état « offert » d'un cadeau pour l'utilisateur courant.
+     *
+     * <p>Si le cadeau n'est pas encore pris, l'utilisateur courant le prend.
+     * Si le cadeau est déjà pris par l'utilisateur courant, il le relâche.
+     * Si le cadeau est pris par quelqu'un d'autre, une exception est levée.</p>
+     *
+     * @param giftId identifiant du cadeau
+     * @param email  email de l'utilisateur courant
+     * @throws ForbiddenModificationException si le cadeau est pris par un autre utilisateur
+     *                                        ou si l'utilisateur est le propriétaire de la liste
+     */
+    @Transactional
+    public void toggleOfferGift(Long giftId, String email) throws ForbiddenModificationException {
+        GiftEntity giftEntity = giftRepo.findByGiftId(giftId).orElseThrow();
+
+        // Le propriétaire de la liste ne peut pas offrir ses propres cadeaux
+        if (giftRepo.existsByGiftIdAndListOwner(giftId, email)) {
+            throw new ForbiddenModificationException("You cannot offer a gift from your own list.");
+        }
+
+        if (Boolean.TRUE.equals(giftEntity.getTaken())) {
+            // Si c'est l'utilisateur courant qui avait pris le cadeau, il le relâche
+            if (email.equals(giftEntity.getHolder())) {
+                giftEntity.setTaken(false);
+                giftEntity.setHolder(null);
+                giftEntity.setHolderPseudo(null);
+            } else {
+                throw new ForbiddenModificationException("This gift is already taken by someone else.");
+            }
+        } else {
+            // Le cadeau est libre, l'utilisateur courant le prend
+            String pseudo;
+            try {
+                pseudo = accountService.getPseudo(email);
+            } catch (AccountNotFoundException e) {
+                pseudo = email;
+            }
+            giftEntity.setTaken(true);
+            giftEntity.setHolder(email);
+            giftEntity.setHolderPseudo(pseudo);
+        }
 
         giftRepo.save(giftEntity);
     }
