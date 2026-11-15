@@ -1,5 +1,3 @@
-DROP TABLE liste_noel.compte CASCADE;
-
 CREATE TABLE liste_noel.secret
 (
     nom_application character varying(50) NOT NULL,

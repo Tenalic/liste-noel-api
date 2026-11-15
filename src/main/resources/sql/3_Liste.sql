@@ -1,4 +1,3 @@
-DROP TABLE liste_noel.liste CASCADE;
 
 CREATE TABLE liste_noel.liste
 (
@@ -10,7 +9,6 @@ CREATE TABLE liste_noel.liste
             REFERENCES liste_noel.compte (email)
 );
 
-DROP TABLE liste_noel.objet CASCADE;
 
 CREATE TABLE liste_noel.objet
 (
@@ -29,9 +27,9 @@ CREATE TABLE liste_noel.objet
 ALTER TABLE liste_noel.objet ADD COLUMN pseudo_detenteur character varying(320);
 
 CREATE TABLE liste_noel.ref_priorite (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    value INT NOT NULL,
-    libelle VARCHAR(100) NOT NULL
+                                         id SERIAL PRIMARY KEY,
+                                         value INT NOT NULL,
+                                         libelle VARCHAR(100) NOT NULL
 );
 
 ALTER TABLE liste_noel.ref_priorite
